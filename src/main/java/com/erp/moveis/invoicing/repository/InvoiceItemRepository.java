@@ -1,0 +1,13 @@
+package com.erp.moveis.invoicing.repository;
+
+import com.erp.moveis.invoicing.entity.InvoiceItem;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface InvoiceItemRepository extends JpaRepository<InvoiceItem, Long> {
+
+    List<InvoiceItem> findByInvoiceId(Long invoiceId);
+}
