@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -87,6 +88,14 @@ public class QuoteController {
     @Operation(summary = "Rejeitar orçamento")
     public ResponseEntity<QuoteResponse> reject(@PathVariable Long id) {
         return ResponseEntity.ok(quoteService.reject(id));
+    }
+
+    @PostMapping("/{id}/convert")
+    @Operation(summary = "Converter orçamento aprovado em pedido (pipeline completo)")
+    public ResponseEntity<QuoteResponse> convert(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "5.00") BigDecimal commissionPercentage) {
+        return ResponseEntity.ok(quoteService.convertToOrder(id, commissionPercentage));
     }
 
     // ── Itens ──────────────────────────────────────────────────

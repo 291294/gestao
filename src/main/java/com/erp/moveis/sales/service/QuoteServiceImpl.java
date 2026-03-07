@@ -2,13 +2,19 @@ package com.erp.moveis.sales.service;
 
 import com.erp.moveis.core.exception.BusinessException;
 import com.erp.moveis.core.exception.ResourceNotFoundException;
+import com.erp.moveis.model.Client;
+import com.erp.moveis.model.Order;
+import com.erp.moveis.repository.ClientRepository;
+import com.erp.moveis.repository.OrderRepository;
 import com.erp.moveis.sales.dto.QuoteItemRequest;
 import com.erp.moveis.sales.dto.QuoteRequest;
 import com.erp.moveis.sales.dto.QuoteResponse;
+import com.erp.moveis.sales.entity.Commission;
 import com.erp.moveis.sales.entity.Quote;
 import com.erp.moveis.sales.entity.QuoteItem;
 import com.erp.moveis.sales.entity.QuoteStatus;
 import com.erp.moveis.sales.mapper.QuoteMapper;
+import com.erp.moveis.sales.repository.CommissionRepository;
 import com.erp.moveis.sales.repository.QuoteItemRepository;
 import com.erp.moveis.sales.repository.QuoteRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +35,10 @@ public class QuoteServiceImpl implements QuoteService {
 
     private final QuoteRepository quoteRepository;
     private final QuoteItemRepository quoteItemRepository;
+    private final OrderRepository orderRepository;
+    private final ClientRepository clientRepository;
+    private final CommissionRepository commissionRepository;
+    private final SalesTargetService salesTargetService;
 
     // ── CRUD ───────────────────────────────────────────────────
 
@@ -162,6 +172,53 @@ public class QuoteServiceImpl implements QuoteService {
             throw new BusinessException("Cannot delete a converted quote");
         }
         quoteRepository.delete(quote);
+    }
+
+    // ── Pipeline: Orçamento → Pedido → Comissão → Meta ───────
+
+    @Override
+    @Transactional
+    public QuoteResponse convertToOrder(Long quoteId, BigDecimal commissionPercentage) {
+        Quote quote = quoteRepository.findFullQuote(quoteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quote", quoteId));
+
+        // 1. Validação: só APPROVED pode ser convertido
+        if (quote.getStatus() != QuoteStatus.APPROVED) {
+            throw new BusinessException("Only APPROVED quotes can be converted to orders. Current: " + quote.getStatus());
+        }
+
+        // 2. Criar Pedido (Order) a partir do orçamento
+        Client client = clientRepository.findById(quote.getClientId())
+                .orElseThrow(() -> new ResourceNotFoundException("Client", quote.getClientId()));
+
+        Order order = new Order();
+        order.setClient(client);
+        order.setTotalValue(quote.getFinalAmount().doubleValue());
+        order.setStatus("CONFIRMED");
+        Order savedOrder = orderRepository.save(order);
+
+        // 3. Marcar orçamento como CONVERTED
+        quote.setStatus(QuoteStatus.CONVERTED);
+        Quote savedQuote = quoteRepository.save(quote);
+
+        // 4. Criar Comissão automaticamente
+        if (commissionPercentage != null && commissionPercentage.compareTo(BigDecimal.ZERO) > 0) {
+            Commission commission = Commission.builder()
+                    .companyId(quote.getCompanyId())
+                    .sellerId(quote.getSellerId())
+                    .orderId(savedOrder.getId())
+                    .quoteId(quote.getId())
+                    .commissionPercentage(commissionPercentage)
+                    .saleAmount(quote.getFinalAmount())
+                    .build();
+            commission.calculateCommission();
+            commissionRepository.save(commission);
+        }
+
+        // 5. Atualizar metas de vendas do vendedor
+        salesTargetService.updateSellerTargets(quote.getSellerId(), quote.getFinalAmount());
+
+        return QuoteMapper.toResponse(savedQuote);
     }
 
     // ── Helpers (private) ──────────────────────────────────────
