@@ -1,11 +1,7 @@
-package com.erp.moveis.sales.model;
+package com.erp.moveis.sales.entity;
 
-import com.erp.moveis.core.company.entity.Company;
-import com.erp.moveis.core.user.entity.User;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,22 +9,22 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "sales_targets")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class SalesTarget {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id", nullable = false)
-    private Company company;
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seller_id")
-    private User seller;
+    @Column(name = "seller_id")
+    private Long sellerId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "target_type", nullable = false, length = 20)
@@ -44,50 +40,53 @@ public class SalesTarget {
     private BigDecimal targetAmount;
 
     @Column(name = "achieved_amount", precision = 15, scale = 2)
-    private BigDecimal achievedAmount = BigDecimal.ZERO;
+    private BigDecimal achievedAmount;
 
     @Column(name = "achievement_percentage", precision = 5, scale = 2)
-    private BigDecimal achievementPercentage = BigDecimal.ZERO;
+    private BigDecimal achievementPercentage;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private TargetStatus status = TargetStatus.ACTIVE;
+    private TargetStatus status;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum TargetType {
-        INDIVIDUAL,  // Meta individual de vendedor
-        TEAM,        // Meta da equipe
-        COMPANY      // Meta da empresa
+        INDIVIDUAL,
+        TEAM,
+        COMPANY
     }
 
     public enum TargetStatus {
-        ACTIVE,      // Ativa
-        COMPLETED,   // Completa
-        CANCELLED    // Cancelada
+        ACTIVE,
+        COMPLETED,
+        CANCELLED
+    }
+
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+        if (this.status == null) this.status = TargetStatus.ACTIVE;
+        if (this.achievedAmount == null) this.achievedAmount = BigDecimal.ZERO;
+        if (this.achievementPercentage == null) this.achievementPercentage = BigDecimal.ZERO;
+        calculateAchievement();
     }
 
     @PreUpdate
-    protected void onUpdate() {
+    public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
         calculateAchievement();
     }
 
-    // Helper method to calculate achievement percentage
     public void calculateAchievement() {
         if (targetAmount != null && achievedAmount != null && targetAmount.compareTo(BigDecimal.ZERO) > 0) {
             this.achievementPercentage = achievedAmount
                     .multiply(new BigDecimal("100"))
                     .divide(targetAmount, 2, java.math.RoundingMode.HALF_UP);
         }
-    }
-
-    @PrePersist
-    protected void calculateBeforeSave() {
-        calculateAchievement();
     }
 }

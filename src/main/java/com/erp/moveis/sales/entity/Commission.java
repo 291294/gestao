@@ -1,12 +1,7 @@
-package com.erp.moveis.sales.model;
+package com.erp.moveis.sales.entity;
 
-import com.erp.moveis.core.company.entity.Company;
-import com.erp.moveis.core.user.entity.User;
-import com.erp.moveis.model.Order;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,30 +9,28 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "commissions")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Commission {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id", nullable = false)
-    private Company company;
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seller_id", nullable = false)
-    private User seller;
+    @Column(name = "seller_id", nullable = false)
+    private Long sellerId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
+    @Column(name = "order_id", nullable = false)
+    private Long orderId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "quote_id")
-    private Quote quote;
+    @Column(name = "quote_id")
+    private Long quoteId;
 
     @Column(name = "commission_percentage", precision = 5, scale = 2, nullable = false)
     private BigDecimal commissionPercentage;
@@ -50,7 +43,7 @@ public class Commission {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private CommissionStatus status = CommissionStatus.PENDING;
+    private CommissionStatus status;
 
     @Column(name = "payment_date")
     private LocalDate paymentDate;
@@ -59,39 +52,35 @@ public class Commission {
     private String notes;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum CommissionStatus {
-        PENDING,    // Pendente de aprovação
-        APPROVED,   // Aprovada
-        PAID,       // Paga
-        CANCELLED   // Cancelada
+        PENDING,
+        APPROVED,
+        PAID,
+        CANCELLED
+    }
+
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+        if (this.status == null) this.status = CommissionStatus.PENDING;
+        if (this.commissionAmount == null) calculateCommission();
     }
 
     @PreUpdate
-    protected void onUpdate() {
+    public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
-        if (this.commissionAmount == null) {
-            calculateCommission();
-        }
     }
 
-    // Helper method to calculate commission
     public void calculateCommission() {
         if (saleAmount != null && commissionPercentage != null) {
             this.commissionAmount = saleAmount
                     .multiply(commissionPercentage)
                     .divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
-        }
-    }
-
-    @PrePersist
-    protected void calculateBeforeSave() {
-        if (this.commissionAmount == null) {
-            calculateCommission();
         }
     }
 }

@@ -1,7 +1,7 @@
 package com.erp.moveis.sales.dto;
 
-import com.erp.moveis.sales.model.SalesTarget.TargetStatus;
-import com.erp.moveis.sales.model.SalesTarget.TargetType;
+import com.erp.moveis.sales.entity.SalesTarget.TargetStatus;
+import com.erp.moveis.sales.entity.SalesTarget.TargetType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

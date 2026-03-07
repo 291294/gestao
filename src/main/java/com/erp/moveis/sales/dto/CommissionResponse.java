@@ -1,6 +1,6 @@
 package com.erp.moveis.sales.dto;
 
-import com.erp.moveis.sales.model.Commission.CommissionStatus;
+import com.erp.moveis.sales.entity.Commission.CommissionStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

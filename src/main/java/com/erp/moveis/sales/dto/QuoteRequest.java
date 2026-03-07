@@ -1,6 +1,6 @@
 package com.erp.moveis.sales.dto;
 
-import com.erp.moveis.sales.model.Quote.QuoteStatus;
+import com.erp.moveis.sales.entity.QuoteStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
