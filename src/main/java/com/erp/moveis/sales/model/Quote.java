@@ -1,7 +1,7 @@
 package com.erp.moveis.sales.model;
 
-import com.erp.moveis.core.company.model.Company;
-import com.erp.moveis.core.user.model.User;
+import com.erp.moveis.core.company.entity.Company;
+import com.erp.moveis.core.user.entity.User;
 import com.erp.moveis.model.Client;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

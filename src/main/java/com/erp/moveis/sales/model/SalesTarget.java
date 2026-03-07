@@ -1,7 +1,7 @@
 package com.erp.moveis.sales.model;
 
-import com.erp.moveis.core.company.model.Company;
-import com.erp.moveis.core.user.model.User;
+import com.erp.moveis.core.company.entity.Company;
+import com.erp.moveis.core.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -74,6 +74,7 @@ public class SalesTarget {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+        calculateAchievement();
     }
 
     // Helper method to calculate achievement percentage
@@ -86,7 +87,6 @@ public class SalesTarget {
     }
 
     @PrePersist
-    @PreUpdate
     protected void calculateBeforeSave() {
         calculateAchievement();
     }

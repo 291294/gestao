@@ -1,7 +1,7 @@
 package com.erp.moveis.sales.model;
 
-import com.erp.moveis.core.company.model.Company;
-import com.erp.moveis.core.user.model.User;
+import com.erp.moveis.core.company.entity.Company;
+import com.erp.moveis.core.user.entity.User;
 import com.erp.moveis.model.Order;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -74,6 +74,9 @@ public class Commission {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+        if (this.commissionAmount == null) {
+            calculateCommission();
+        }
     }
 
     // Helper method to calculate commission
@@ -86,7 +89,6 @@ public class Commission {
     }
 
     @PrePersist
-    @PreUpdate
     protected void calculateBeforeSave() {
         if (this.commissionAmount == null) {
             calculateCommission();
