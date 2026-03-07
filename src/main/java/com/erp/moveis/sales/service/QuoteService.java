@@ -1,7 +1,8 @@
 package com.erp.moveis.sales.service;
 
-import com.erp.moveis.sales.entity.Quote;
-import com.erp.moveis.sales.entity.QuoteItem;
+import com.erp.moveis.sales.dto.QuoteItemRequest;
+import com.erp.moveis.sales.dto.QuoteRequest;
+import com.erp.moveis.sales.dto.QuoteResponse;
 import com.erp.moveis.sales.entity.QuoteStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,29 +11,27 @@ import java.util.List;
 
 public interface QuoteService {
 
-    Quote createQuote(Quote quote);
+    QuoteResponse createQuote(QuoteRequest request);
 
-    Quote findById(Long id);
+    QuoteResponse getQuote(Long id);
 
-    Quote findFullQuote(Long id);
+    List<QuoteResponse> getQuotesByCompany(Long companyId);
 
-    List<Quote> findByCompany(Long companyId);
+    Page<QuoteResponse> getQuotesByCompany(Long companyId, Pageable pageable);
 
-    Page<Quote> findByCompany(Long companyId, Pageable pageable);
+    List<QuoteResponse> getQuotesByStatus(QuoteStatus status);
 
-    List<Quote> findByStatus(QuoteStatus status);
+    QuoteResponse updateStatus(Long id, QuoteStatus status);
 
-    Quote updateStatus(Long id, QuoteStatus status);
+    QuoteResponse approve(Long id);
 
-    Quote approve(Long id);
+    QuoteResponse reject(Long id);
 
-    Quote reject(Long id);
-
-    Quote addItem(Long quoteId, QuoteItem item);
+    QuoteResponse addItem(Long quoteId, QuoteItemRequest itemRequest);
 
     void removeItem(Long quoteId, Long itemId);
 
-    Quote calculateTotals(Long id);
+    QuoteResponse calculateTotals(Long id);
 
     void deleteQuote(Long id);
 }

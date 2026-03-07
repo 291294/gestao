@@ -3,10 +3,7 @@ package com.erp.moveis.sales.controller;
 import com.erp.moveis.sales.dto.QuoteItemRequest;
 import com.erp.moveis.sales.dto.QuoteRequest;
 import com.erp.moveis.sales.dto.QuoteResponse;
-import com.erp.moveis.sales.entity.Quote;
-import com.erp.moveis.sales.entity.QuoteItem;
 import com.erp.moveis.sales.entity.QuoteStatus;
-import com.erp.moveis.sales.mapper.QuoteMapper;
 import com.erp.moveis.sales.service.QuoteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -20,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/quotes")
@@ -36,16 +32,14 @@ public class QuoteController {
     @PostMapping
     @Operation(summary = "Criar novo orçamento")
     public ResponseEntity<QuoteResponse> create(@RequestBody QuoteRequest request) {
-        Quote quote = QuoteMapper.toEntity(request);
-        Quote saved = quoteService.createQuote(quote);
-        return ResponseEntity.status(HttpStatus.CREATED).body(QuoteMapper.toResponse(saved));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(quoteService.createQuote(request));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Buscar orçamento por ID (com itens)")
     public ResponseEntity<QuoteResponse> findById(@PathVariable Long id) {
-        Quote quote = quoteService.findFullQuote(id);
-        return ResponseEntity.ok(QuoteMapper.toResponse(quote));
+        return ResponseEntity.ok(quoteService.getQuote(id));
     }
 
     @GetMapping("/company/{companyId}")
@@ -54,20 +48,16 @@ public class QuoteController {
             @PathVariable Long companyId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Page<Quote> quotes = quoteService.findByCompany(
+        return ResponseEntity.ok(quoteService.getQuotesByCompany(
                 companyId,
                 PageRequest.of(page, size, Sort.by("createdAt").descending())
-        );
-        return ResponseEntity.ok(quotes.map(QuoteMapper::toResponse));
+        ));
     }
 
     @GetMapping("/status/{status}")
     @Operation(summary = "Listar orçamentos por status")
     public ResponseEntity<List<QuoteResponse>> findByStatus(@PathVariable QuoteStatus status) {
-        List<QuoteResponse> list = quoteService.findByStatus(status).stream()
-                .map(QuoteMapper::toResponse)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(list);
+        return ResponseEntity.ok(quoteService.getQuotesByStatus(status));
     }
 
     @DeleteMapping("/{id}")
@@ -84,22 +74,19 @@ public class QuoteController {
     public ResponseEntity<QuoteResponse> updateStatus(
             @PathVariable Long id,
             @RequestParam QuoteStatus status) {
-        Quote quote = quoteService.updateStatus(id, status);
-        return ResponseEntity.ok(QuoteMapper.toResponse(quote));
+        return ResponseEntity.ok(quoteService.updateStatus(id, status));
     }
 
     @PostMapping("/{id}/approve")
     @Operation(summary = "Aprovar orçamento")
     public ResponseEntity<QuoteResponse> approve(@PathVariable Long id) {
-        Quote quote = quoteService.approve(id);
-        return ResponseEntity.ok(QuoteMapper.toResponse(quote));
+        return ResponseEntity.ok(quoteService.approve(id));
     }
 
     @PostMapping("/{id}/reject")
     @Operation(summary = "Rejeitar orçamento")
     public ResponseEntity<QuoteResponse> reject(@PathVariable Long id) {
-        Quote quote = quoteService.reject(id);
-        return ResponseEntity.ok(QuoteMapper.toResponse(quote));
+        return ResponseEntity.ok(quoteService.reject(id));
     }
 
     // ── Itens ──────────────────────────────────────────────────
@@ -109,9 +96,8 @@ public class QuoteController {
     public ResponseEntity<QuoteResponse> addItem(
             @PathVariable Long id,
             @RequestBody QuoteItemRequest request) {
-        QuoteItem item = QuoteMapper.toItemEntity(request);
-        Quote quote = quoteService.addItem(id, item);
-        return ResponseEntity.status(HttpStatus.CREATED).body(QuoteMapper.toResponse(quote));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(quoteService.addItem(id, request));
     }
 
     @DeleteMapping("/{quoteId}/items/{itemId}")
@@ -128,7 +114,6 @@ public class QuoteController {
     @PostMapping("/{id}/calculate")
     @Operation(summary = "Recalcular totais do orçamento")
     public ResponseEntity<QuoteResponse> calculate(@PathVariable Long id) {
-        Quote quote = quoteService.calculateTotals(id);
-        return ResponseEntity.ok(QuoteMapper.toResponse(quote));
+        return ResponseEntity.ok(quoteService.calculateTotals(id));
     }
 }
