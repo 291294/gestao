@@ -1,11 +1,33 @@
 # 🏢 ERP Móveis - Sistema de Gestão Empresarial
 
+<div align="center">
+
+```
+╔══════════════════════════════════════════════════════════╗
+║                    ERP MÓVEIS                            ║
+║                                                          ║
+║   CRM  │  Vendas  │  Produção  │  Logística  │  Financeiro  ║
+║                                                          ║
+║         Sistema de Gestão Empresarial Completo           ║
+╚══════════════════════════════════════════════════════════╝
+```
+
 [![Java](https://img.shields.io/badge/Java-21%20LTS-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-42.7.3-blue.svg)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue.svg)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 
+</div>
+
 Sistema completo de gestão empresarial (ERP) desenvolvido para a indústria de móveis, com módulos integrados de CRM, Vendas, Produção, Logística e Financeiro.
+
+## 🔄 Fluxo do Sistema
+
+```
+Cliente → Orçamento → Pedido → Produção → Entrega → Financeiro
+   │          │          │         │          │          │
+   └── CRM    └── Sales  └── Sales └── MFG    └── LOG    └── FIN
+```
 
 ## 🎯 Funcionalidades
 
@@ -17,8 +39,11 @@ Sistema completo de gestão empresarial (ERP) desenvolvido para a indústria de 
 - **Gestão de Produtos** - Cadastro e controle de estoque
 - **Gestão de Projetos** - Acompanhamento de projetos customizados
 - **Gestão de Pedidos** - Controle de vendas
+- **Orçamentos** - Quotes com itens, aprovação e conversão em pedido
+- **Comissões** - Cálculo automático de comissões de vendedores
+- **Metas de Vendas** - Targets individuais, equipe e empresa
 - **API REST** - Endpoints documentados com Swagger/OpenAPI
-- **Database Migrations** - Flyway para versionamento de schema
+- **Database Migrations** - Flyway para versionamento de schema (V1-V10)
 - **Auditoria** - Logs de alterações (estrutura preparada)
 
 ### 🔄 Em Desenvolvimento
@@ -28,16 +53,40 @@ Sistema completo de gestão empresarial (ERP) desenvolvido para a indústria de 
 - Relatórios e Dashboards
 - Gestão de Usuários (UI)
 
+## 🗺️ Roadmap
+
+| Status | Módulo | Descrição |
+|--------|--------|-----------|
+| ✅ | Security | JWT + RBAC + Multiempresa |
+| ✅ | CRM | Gestão de Clientes |
+| ✅ | Catalog | Produtos e Estoque |
+| ✅ | Orders | Pedidos de Venda |
+| ✅ | Quotes | Orçamentos |
+| ✅ | Commissions | Comissões de Vendedores |
+| ✅ | Sales Targets | Metas de Vendas |
+| ⬜ | Finance | Contas a Pagar/Receber |
+| ⬜ | Production | Ordens de Fabricação |
+| ⬜ | Logistics | Entregas e Expedição |
+| ⬜ | Dashboard | Relatórios e KPIs |
+| ⬜ | Notifications | Alertas e Notificações |
+
 ## 🏗️ Arquitetura
 
 ### Stack Tecnológico
 - **Backend**: Java 21 LTS, Spring Boot 3.2.5
 - **Security**: Spring Security 6.2.4, JWT (jjwt 0.12.5)
-- **Database**: PostgreSQL 42.7.3
+- **Database**: PostgreSQL 17
 - **ORM**: Spring Data JPA, Hibernate 6.4.x
 - **Migrations**: Flyway 10.10.0
 - **API Docs**: Swagger/OpenAPI 2.5.0
 - **Build**: Maven 3.9.6
+
+### Infraestrutura Futura
+- **Cache**: Redis
+- **Mensageria**: RabbitMQ
+- **Containers**: Docker / Docker Compose
+- **CI/CD**: GitHub Actions
+- **Monitoramento**: Spring Actuator + Prometheus + Grafana
 
 ### Padrões de Design
 - **DDD-Lite** - Estrutura modular por domínio
@@ -45,6 +94,38 @@ Sistema completo de gestão empresarial (ERP) desenvolvido para a indústria de 
 - **DTO Pattern** - Transferência de dados entre camadas
 - **Builder Pattern** - Construção de objetos complexos
 - **Strategy Pattern** - Autenticação e autorização
+
+### Estrutura de Diretórios
+
+```
+src/main/java/com/erp/moveis/
+│
+├── core/                    # Núcleo do sistema
+│   ├── auth/                # Autenticação (login, JWT, refresh)
+│   ├── user/                # Usuários (entity, repository, service)
+│   ├── company/             # Empresas (multiempresa)
+│   ├── role/                # Papéis (ADMIN, VENDEDOR, etc.)
+│   ├── permission/          # Permissões granulares
+│   ├── security/            # Filtros, configuração Spring Security
+│   └── config/              # Configurações gerais (DataLoader, etc.)
+│
+├── model/                   # Entidades de negócio
+│   ├── Client.java          # Clientes
+│   ├── Product.java         # Produtos
+│   ├── Order.java           # Pedidos
+│   └── Project.java         # Projetos customizados
+│
+├── sales/                   # Módulo de Vendas
+│   ├── model/               # Quote, QuoteItem, Commission, SalesTarget
+│   ├── dto/                 # Request/Response DTOs
+│   └── repository/          # Repositórios JPA
+│
+├── controller/              # REST Controllers
+├── service/                 # Serviços de negócio
+├── repository/              # Repositórios base
+├── dto/                     # DTOs compartilhados
+└── config/                  # Configurações (Swagger, CORS, etc.)
+```
 
 ## 🚀 Início Rápido
 
@@ -71,19 +152,16 @@ spring.datasource.username=seu_usuario
 spring.datasource.password=sua_senha
 ```
 
-### 3. Execute as Migrations
-```bash
-mvn flyway:migrate
-```
-
-### 4. Compile e Execute
+### 3. Compile e Execute
 ```bash
 mvn spring-boot:run
 ```
 
-### 5. Acesse a API
+> O Flyway executa automaticamente todas as migrations (V1-V10) na inicialização.
+
+### 4. Acesse a API
 - **API Base**: http://localhost:8080/api
-- **Swagger UI**: http://localhost:8080/api/swagger-ui.html
+- **Swagger UI**: http://localhost:8080/swagger-ui/index.html
 - **Health Check**: http://localhost:8080/api/actuator/health
 
 ## 🔐 Autenticação
@@ -139,14 +217,15 @@ curl -X GET http://localhost:8080/api/clients \
 
 ### Permissões Granulares (resource.action)
 ```
-client.{create, view, update, delete, list}
-product.{create, view, update, delete, list}
-project.{create, view, update, delete, list}
-order.{create, view, update, delete, list, approve, cancel}
-payment.{create, view, update, delete, list, approve}
-invoice.{create, view, update, delete, list, generate}
-delivery.{create, view, update, delete, list, schedule, complete}
-user.{create, view, update, delete, list, assign_role}
+client.{create, read, update, delete, list}
+product.{create, read, update, delete, list}
+project.{create, read, update, delete, list}
+order.{create, read, update, delete, list, approve, cancel}
+quote.{create, read, update, delete, list, approve, convert}
+payment.{create, read, update, delete, list, approve}
+invoice.{create, read, update, delete, list, generate}
+delivery.{create, read, update, delete, list, schedule, complete}
+user.{create, read, update, delete, list, assign_role}
 report.{sales, financial, inventory, production}
 ```
 
@@ -157,13 +236,7 @@ report.{sales, financial, inventory, production}
 
 ## 🗄️ Estrutura do Banco de Dados
 
-### Módulo de Negócio (Existente)
-- `clients` - Clientes
-- `products` - Produtos
-- `projects` - Projetos customizados
-- `orders` - Pedidos de venda
-
-### Módulo de Segurança (Novo)
+### Módulo de Segurança
 - `companies` - Empresas (multiempresa)
 - `users` - Usuários do sistema
 - `roles` - Papéis (ADMIN, VENDEDOR, etc.)
@@ -171,6 +244,17 @@ report.{sales, financial, inventory, production}
 - `user_roles` - Relacionamento usuário-papel
 - `role_permissions` - Relacionamento papel-permissão
 - `audit_logs` - Auditoria de ações
+
+### Módulo de Negócio
+- `clients` - Clientes
+- `products` - Produtos
+- `orders` - Pedidos de venda
+
+### Módulo de Vendas
+- `quotes` - Orçamentos
+- `quote_items` - Itens do orçamento
+- `commissions` - Comissões de vendedores
+- `sales_targets` - Metas de vendas
 
 ## 🔧 Comandos Úteis
 
@@ -194,10 +278,10 @@ mvn clean package
 java -jar target/erp-moveis-1.0-SNAPSHOT.jar
 ```
 
-### Limpar Database
+### Resetar Database
 ```bash
-mvn flyway:clean
-mvn flyway:migrate
+# Execute clean_database.sql no pgAdmin, depois:
+mvn spring-boot:run
 ```
 
 ## 📊 Métricas de Qualidade
@@ -205,6 +289,8 @@ mvn flyway:migrate
 - ✅ **Compilação**: 100% sucesso
 - ✅ **Vulnerabilidades**: 0 CVEs detectados
 - ✅ **Endpoints**: 16 (13 protegidos + 3 públicos)
+- ✅ **Migrations**: 10 (V1-V10)
+- ✅ **Tabelas**: 14
 - ✅ **Cobertura de Testes**: Em desenvolvimento
 
 ## 🛡️ Segurança
