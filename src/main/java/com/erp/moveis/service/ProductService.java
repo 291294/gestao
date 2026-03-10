@@ -3,6 +3,8 @@ package com.erp.moveis.service;
 import com.erp.moveis.model.Product;
 import com.erp.moveis.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,6 +18,10 @@ public class ProductService {
 
     public List<Product> list() {
         return repository.findAll();
+    }
+
+    public Page<Product> listPaged(Pageable pageable) {
+        return repository.findAll(pageable);
     }
 
     public Optional<Product> findById(Long id) {

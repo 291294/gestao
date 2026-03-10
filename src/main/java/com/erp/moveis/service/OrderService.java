@@ -7,6 +7,8 @@ import com.erp.moveis.model.OrderItem;
 import com.erp.moveis.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,10 @@ public class OrderService {
 
     public List<Order> list() {
         return repository.findAll();
+    }
+
+    public Page<Order> listPaged(Pageable pageable) {
+        return repository.findAll(pageable);
     }
 
     public Optional<Order> findById(Long id) {
