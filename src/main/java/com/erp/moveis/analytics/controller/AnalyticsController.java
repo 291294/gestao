@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/analytics")
+@RequestMapping("/analytics")
 @RequiredArgsConstructor
 public class AnalyticsController {
 

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +32,14 @@ public class ManufacturingServiceImpl implements ManufacturingService {
         order.setQuantity(quantity);
         order.setStatus(ProductionStatus.CREATED);
         return orderRepository.save(order);
+    }
+
+    @Override
+    public List<ProductionOrder> findByCompany(Long companyId) {
+        if (companyId == null) {
+            return orderRepository.findAll();
+        }
+        return orderRepository.findByCompanyId(companyId);
     }
 
     @Override

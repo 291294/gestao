@@ -15,7 +15,7 @@ INSERT INTO users (username, email, password_hash, full_name, company_id, active
 VALUES (
     'admin',
     'admin@erp-moveis.com',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', -- admin123
+    '$2b$12$QW.Z/Bf5dt/oQod35NgDYe1fYQYW8MaIJxrwZDxKavepLxwrp1xA.', -- admin123
     'Administrador do Sistema',
     (SELECT id FROM companies WHERE cnpj = '00.000.000/0001-00'),
     true,

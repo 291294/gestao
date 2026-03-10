@@ -1,5 +1,7 @@
 package com.erp.moveis.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -22,6 +24,7 @@ public class Order {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Client client;
 
     private String status;
@@ -78,6 +81,20 @@ public class Order {
 
     public void setClient(Client client) {
         this.client = client;
+    }
+
+    @JsonProperty("clientId")
+    public void setClientId(Long clientId) {
+        if (clientId != null) {
+            Client c = new Client();
+            c.setId(clientId);
+            this.client = c;
+        }
+    }
+
+    @JsonProperty("clientId")
+    public Long getClientId() {
+        return client != null ? client.getId() : null;
     }
 
     public String getStatus() {

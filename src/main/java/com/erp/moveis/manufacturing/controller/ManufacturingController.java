@@ -6,13 +6,24 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/manufacturing")
+@RequestMapping("/manufacturing")
 @RequiredArgsConstructor
 public class ManufacturingController {
 
     private final ManufacturingService service;
+
+    @GetMapping("/production-orders")
+    public List<ProductionOrder> listAll() {
+        return service.findByCompany(null);
+    }
+
+    @GetMapping("/production-orders/company/{companyId}")
+    public List<ProductionOrder> listByCompany(@PathVariable Long companyId) {
+        return service.findByCompany(companyId);
+    }
 
     @PostMapping("/production-order")
     public ProductionOrder create(
