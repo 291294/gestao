@@ -90,14 +90,23 @@ public class DeliveryServiceImpl implements DeliveryService {
             throw new BusinessException("Only PENDING or PREPARING deliveries can be shipped. Current: " + delivery.getStatus());
         }
 
-        // Baixa de estoque para cada item
+        // Baixa de estoque para cada item da entrega (item-based)
         for (DeliveryItem item : delivery.getItems()) {
-            inventoryService.removeStock(
-                    null, // será buscado por produto na próxima evolução
+            inventoryService.removeStockByProduct(
+                    delivery.getCompanyId(),
+                    item.getProductId(),
                     item.getQuantity(),
                     "DELIVERY",
                     delivery.getId(),
                     "Saída por entrega " + delivery.getDeliveryNumber()
+            );
+
+            // Consumo no warehouse stock (RESERVATION → SALE)
+            inventoryService.removeWarehouseStock(
+                    delivery.getCompanyId(),
+                    item.getProductId(),
+                    1L,
+                    java.math.BigDecimal.valueOf(item.getQuantity())
             );
         }
 

@@ -65,4 +65,11 @@ public class OrderController {
         service.delete(id);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAuthority('order.update')")
+    @Operation(summary = "Cancelar pedido e liberar estoque reservado")
+    public ResponseEntity<Order> cancel(@PathVariable Long id) {
+        return ResponseEntity.ok(service.cancel(id));
+    }
 }

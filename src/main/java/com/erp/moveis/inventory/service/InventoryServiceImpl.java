@@ -8,14 +8,19 @@ import com.erp.moveis.inventory.dto.InventoryMovementResponse;
 import com.erp.moveis.inventory.entity.InventoryItem;
 import com.erp.moveis.inventory.entity.InventoryMovement;
 import com.erp.moveis.inventory.entity.MovementType;
+import com.erp.moveis.inventory.entity.StockMovement;
+import com.erp.moveis.inventory.entity.StockMovementType;
 import com.erp.moveis.inventory.mapper.InventoryMapper;
 import com.erp.moveis.inventory.repository.InventoryItemRepository;
 import com.erp.moveis.inventory.repository.InventoryMovementRepository;
+import com.erp.moveis.inventory.repository.StockMovementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,6 +30,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryItemRepository itemRepository;
     private final InventoryMovementRepository movementRepository;
+    private final StockMovementRepository stockMovementRepository;
 
     // ── CRUD ───────────────────────────────────────────────────
 
@@ -154,6 +160,149 @@ public class InventoryServiceImpl implements InventoryService {
         return movementRepository.findByInventoryItemIdOrderByCreatedAtDesc(itemId).stream()
                 .map(InventoryMapper::toMovementResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public InventoryItemResponse updateItem(Long id, InventoryItemRequest request) {
+        InventoryItem item = findEntityById(id);
+        if (request.getWarehouseLocation() != null) item.setWarehouseLocation(request.getWarehouseLocation());
+        if (request.getMinStockLevel() != null) item.setMinStockLevel(request.getMinStockLevel());
+        if (request.getMaxStockLevel() != null) item.setMaxStockLevel(request.getMaxStockLevel());
+        if (request.getUnitCost() != null) item.setUnitCost(request.getUnitCost());
+        return InventoryMapper.toResponse(itemRepository.save(item));
+    }
+
+    @Override
+    @Transactional
+    public InventoryMovementResponse removeStockByProduct(Long companyId, Long productId, int quantity,
+                                                           String referenceType, Long referenceId, String notes) {
+        InventoryItem item = itemRepository.findByCompanyIdAndProductId(companyId, productId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "InventoryItem for company " + companyId + " and product " + productId, companyId));
+        return removeStock(item.getId(), quantity, referenceType, referenceId, notes);
+    }
+
+    // ── Warehouse-aware stock movements ─────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getWarehouseStock(Long productId, Long warehouseId) {
+        return stockMovementRepository.getCurrentStock(productId, warehouseId);
+    }
+
+    @Override
+    @Transactional
+    public void addWarehouseStock(Long companyId, Long productId, Long warehouseId, BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Quantity must be positive");
+        }
+        StockMovement movement = StockMovement.builder()
+                .companyId(companyId)
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .movementType(StockMovementType.PURCHASE)
+                .quantity(quantity)
+                .build();
+        stockMovementRepository.save(movement);
+    }
+
+    @Override
+    @Transactional
+    public void removeWarehouseStock(Long companyId, Long productId, Long warehouseId, BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Quantity must be positive");
+        }
+        BigDecimal currentStock = stockMovementRepository.getCurrentStock(productId, warehouseId);
+        if (currentStock.compareTo(quantity) < 0) {
+            throw new BusinessException("Insufficient warehouse stock. Available: " + currentStock + ", requested: " + quantity);
+        }
+        StockMovement movement = StockMovement.builder()
+                .companyId(companyId)
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .movementType(StockMovementType.SALE)
+                .quantity(quantity.negate())
+                .build();
+        stockMovementRepository.save(movement);
+    }
+
+    @Override
+    @Transactional
+    public void reserveWarehouseStock(Long companyId, Long productId, Long warehouseId,
+                                       BigDecimal quantity, Long orderId) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Quantity must be positive");
+        }
+        BigDecimal currentStock = stockMovementRepository.getCurrentStock(productId, warehouseId);
+        if (currentStock.compareTo(quantity) < 0) {
+            throw new BusinessException("Insufficient stock for product " + productId
+                    + ". Available: " + currentStock + ", requested: " + quantity);
+        }
+        StockMovement movement = StockMovement.builder()
+                .companyId(companyId)
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .movementType(StockMovementType.RESERVATION)
+                .quantity(quantity.negate())
+                .referenceType("ORDER")
+                .referenceId(orderId)
+                .build();
+        stockMovementRepository.save(movement);
+    }
+
+    @Override
+    @Transactional
+    public void releaseWarehouseReservation(Long companyId, Long productId, Long warehouseId,
+                                             BigDecimal quantity, Long orderId) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Quantity must be positive");
+        }
+        StockMovement movement = StockMovement.builder()
+                .companyId(companyId)
+                .productId(productId)
+                .warehouseId(warehouseId)
+                .movementType(StockMovementType.RELEASE)
+                .quantity(quantity)
+                .referenceType("ORDER_CANCEL")
+                .referenceId(orderId)
+                .build();
+        stockMovementRepository.save(movement);
+    }
+
+    @Override
+    @Transactional
+    public void transferStock(Long companyId, Long productId,
+                              Long fromWarehouse, Long toWarehouse,
+                              BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Quantity must be positive");
+        }
+        BigDecimal stock = stockMovementRepository.getCurrentStock(productId, fromWarehouse);
+        if (stock.compareTo(quantity) < 0) {
+            throw new BusinessException("Insufficient stock for transfer. Available: " + stock + ", requested: " + quantity);
+        }
+
+        StockMovement out = StockMovement.builder()
+                .companyId(companyId)
+                .productId(productId)
+                .warehouseId(fromWarehouse)
+                .movementType(StockMovementType.TRANSFER)
+                .quantity(quantity.negate())
+                .referenceType("TRANSFER_OUT")
+                .build();
+
+        StockMovement in = StockMovement.builder()
+                .companyId(companyId)
+                .productId(productId)
+                .warehouseId(toWarehouse)
+                .movementType(StockMovementType.TRANSFER)
+                .quantity(quantity)
+                .referenceType("TRANSFER_IN")
+                .build();
+
+        stockMovementRepository.save(out);
+        stockMovementRepository.save(in);
     }
 
     // ── Helpers ────────────────────────────────────────────────

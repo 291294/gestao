@@ -5,6 +5,7 @@ import com.erp.moveis.inventory.dto.InventoryItemResponse;
 import com.erp.moveis.inventory.dto.InventoryMovementResponse;
 import com.erp.moveis.inventory.entity.MovementType;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface InventoryService {
@@ -32,4 +33,22 @@ public interface InventoryService {
     InventoryItemResponse releaseReservation(Long itemId, int quantity);
 
     List<InventoryMovementResponse> getMovements(Long itemId);
+
+    InventoryItemResponse updateItem(Long id, InventoryItemRequest request);
+
+    InventoryMovementResponse removeStockByProduct(Long companyId, Long productId, int quantity, String referenceType, Long referenceId, String notes);
+
+    // ── Warehouse-aware stock movements ─────────────────────────
+
+    BigDecimal getWarehouseStock(Long productId, Long warehouseId);
+
+    void addWarehouseStock(Long companyId, Long productId, Long warehouseId, BigDecimal quantity);
+
+    void removeWarehouseStock(Long companyId, Long productId, Long warehouseId, BigDecimal quantity);
+
+    void reserveWarehouseStock(Long companyId, Long productId, Long warehouseId, BigDecimal quantity, Long orderId);
+
+    void releaseWarehouseReservation(Long companyId, Long productId, Long warehouseId, BigDecimal quantity, Long orderId);
+
+    void transferStock(Long companyId, Long productId, Long fromWarehouse, Long toWarehouse, BigDecimal quantity);
 }

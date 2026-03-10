@@ -64,6 +64,8 @@ public class SalesTarget {
     public enum TargetStatus {
         ACTIVE,
         COMPLETED,
+        ACHIEVED,
+        EXPIRED,
         CANCELLED
     }
 

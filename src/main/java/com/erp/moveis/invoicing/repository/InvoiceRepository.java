@@ -37,6 +37,9 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     @Query("SELECT i FROM Invoice i WHERE i.dueDate < :date AND i.status IN ('ISSUED', 'SENT', 'PARTIALLY_PAID')")
     List<Invoice> findOverdue(@Param("date") LocalDate date);
 
+    @Query("SELECT i FROM Invoice i WHERE i.dueDate < CURRENT_DATE AND i.status IN ('ISSUED', 'SENT', 'PARTIALLY_PAID')")
+    List<Invoice> findOverdueInvoices();
+
     @Query("SELECT COALESCE(SUM(i.totalAmount - i.amountPaid), 0) FROM Invoice i WHERE i.clientId = :clientId AND i.status IN ('ISSUED', 'SENT', 'PARTIALLY_PAID', 'OVERDUE')")
     BigDecimal calculateOpenBalanceByClient(@Param("clientId") Long clientId);
 

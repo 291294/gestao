@@ -16,6 +16,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class AuthService {
 
@@ -57,15 +60,7 @@ public class AuthService {
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        return TokenResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .tokenType("Bearer")
-                .expiresIn(86400000L) // 24 hours
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .build();
+        return buildResponse(user, accessToken, refreshToken);
     }
 
     @Transactional
@@ -98,15 +93,7 @@ public class AuthService {
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        return TokenResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .tokenType("Bearer")
-                .expiresIn(86400000L)
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .build();
+        return buildResponse(user, accessToken, refreshToken);
     }
 
     @Transactional(readOnly = true)
@@ -121,14 +108,33 @@ public class AuthService {
 
         String newAccessToken = jwtService.generateToken(user);
 
+        return buildResponse(user, newAccessToken, refreshToken);
+    }
+
+    private TokenResponse buildResponse(User user, String accessToken, String refreshToken) {
+        List<String> roleNames = user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toList());
+
+        List<String> permissionList = user.getRoles().stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .map(p -> p.getResource() + "." + p.getAction())
+                .distinct()
+                .collect(Collectors.toList());
+
+        Long companyId = user.getCompany() != null ? user.getCompany().getId() : null;
+
         return TokenResponse.builder()
-                .accessToken(newAccessToken)
+                .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(86400000L)
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
+                .companyId(companyId)
+                .roles(roleNames)
+                .permissions(permissionList)
                 .build();
     }
 }

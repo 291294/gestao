@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -36,6 +37,12 @@ public class InventoryController {
     @Operation(summary = "Buscar item por ID")
     public ResponseEntity<InventoryItemResponse> findById(@PathVariable Long id) {
         return ResponseEntity.ok(inventoryService.getItem(id));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Atualizar item de estoque")
+    public ResponseEntity<InventoryItemResponse> update(@PathVariable Long id, @RequestBody InventoryItemRequest request) {
+        return ResponseEntity.ok(inventoryService.updateItem(id, request));
     }
 
     @GetMapping("/company/{companyId}")
@@ -114,5 +121,37 @@ public class InventoryController {
     @Operation(summary = "Histórico de movimentações")
     public ResponseEntity<List<InventoryMovementResponse>> movements(@PathVariable Long id) {
         return ResponseEntity.ok(inventoryService.getMovements(id));
+    }
+
+    // ── Warehouse-aware stock ───────────────────────────────────
+
+    @GetMapping("/stock")
+    @Operation(summary = "Consultar estoque por produto e armazém")
+    public ResponseEntity<BigDecimal> getWarehouseStock(
+            @RequestParam Long productId,
+            @RequestParam Long warehouseId) {
+        return ResponseEntity.ok(inventoryService.getWarehouseStock(productId, warehouseId));
+    }
+
+    @PostMapping("/stock/add")
+    @Operation(summary = "Entrada de estoque por armazém")
+    public ResponseEntity<Void> addWarehouseStock(
+            @RequestParam Long companyId,
+            @RequestParam Long productId,
+            @RequestParam Long warehouseId,
+            @RequestParam BigDecimal quantity) {
+        inventoryService.addWarehouseStock(companyId, productId, warehouseId, quantity);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/stock/remove")
+    @Operation(summary = "Saída de estoque por armazém")
+    public ResponseEntity<Void> removeWarehouseStock(
+            @RequestParam Long companyId,
+            @RequestParam Long productId,
+            @RequestParam Long warehouseId,
+            @RequestParam BigDecimal quantity) {
+        inventoryService.removeWarehouseStock(companyId, productId, warehouseId, quantity);
+        return ResponseEntity.ok().build();
     }
 }

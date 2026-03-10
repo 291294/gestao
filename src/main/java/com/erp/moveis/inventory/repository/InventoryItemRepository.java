@@ -21,4 +21,7 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, Lo
 
     @Query("SELECT i FROM InventoryItem i WHERE i.companyId = :companyId AND i.quantityOnHand = 0")
     List<InventoryItem> findOutOfStock(@Param("companyId") Long companyId);
+
+    @Query("SELECT i FROM InventoryItem i WHERE (i.quantityOnHand - i.quantityReserved) <= i.minStockLevel")
+    List<InventoryItem> findAllLowStock();
 }

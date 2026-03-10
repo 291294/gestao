@@ -1,5 +1,7 @@
 package com.erp.moveis.core.auth.dto;
 
+import java.util.List;
+
 public class TokenResponse {
 
     private String accessToken;
@@ -9,6 +11,9 @@ public class TokenResponse {
     private String username;
     private String email;
     private String fullName;
+    private Long companyId;
+    private List<String> roles;
+    private List<String> permissions;
 
     public TokenResponse() {
     }
@@ -21,6 +26,9 @@ public class TokenResponse {
         this.username = builder.username;
         this.email = builder.email;
         this.fullName = builder.fullName;
+        this.companyId = builder.companyId;
+        this.roles = builder.roles;
+        this.permissions = builder.permissions;
     }
 
     public static Builder builder() {
@@ -35,6 +43,9 @@ public class TokenResponse {
         private String username;
         private String email;
         private String fullName;
+        private Long companyId;
+        private List<String> roles;
+        private List<String> permissions;
 
         public Builder accessToken(String accessToken) {
             this.accessToken = accessToken;
@@ -68,6 +79,21 @@ public class TokenResponse {
 
         public Builder fullName(String fullName) {
             this.fullName = fullName;
+            return this;
+        }
+
+        public Builder companyId(Long companyId) {
+            this.companyId = companyId;
+            return this;
+        }
+
+        public Builder roles(List<String> roles) {
+            this.roles = roles;
+            return this;
+        }
+
+        public Builder permissions(List<String> permissions) {
+            this.permissions = permissions;
             return this;
         }
 
@@ -131,5 +157,29 @@ public class TokenResponse {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public Long getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(Long companyId) {
+        this.companyId = companyId;
+    }
+
+    public List<String> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<String> roles) {
+        this.roles = roles;
+    }
+
+    public List<String> getPermissions() {
+        return permissions;
+    }
+
+    public void setPermissions(List<String> permissions) {
+        this.permissions = permissions;
     }
 }

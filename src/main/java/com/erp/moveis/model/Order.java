@@ -2,6 +2,10 @@ package com.erp.moveis.model;
 
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "orders")
 public class Order {
@@ -9,6 +13,9 @@ public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
 
     @Column(name = "total_value")
     private Double totalValue;
@@ -25,10 +32,14 @@ public class Order {
     @Column(name = "updated_at")
     private Long updatedAt;
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> items = new ArrayList<>();
+
     public Order() {
     }
 
-    public Order(Double totalValue, Client client, String status) {
+    public Order(Long companyId, Double totalValue, Client client, String status) {
+        this.companyId = companyId;
         this.totalValue = totalValue;
         this.client = client;
         this.status = status;
@@ -91,5 +102,33 @@ public class Order {
 
     public void setUpdatedAt(Long updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Long getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(Long companyId) {
+        this.companyId = companyId;
+    }
+
+    public List<OrderItem> getItems() {
+        return items;
+    }
+
+    public void setItems(List<OrderItem> items) {
+        this.items = items;
+    }
+
+    public void addItem(OrderItem item) {
+        items.add(item);
+        item.setOrder(this);
+    }
+
+    public void recalculateTotal() {
+        this.totalValue = items.stream()
+                .filter(i -> i.getSubtotal() != null)
+                .mapToDouble(i -> i.getSubtotal().doubleValue())
+                .sum();
     }
 }
