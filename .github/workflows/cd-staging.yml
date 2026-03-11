@@ -118,7 +118,6 @@ jobs:
     needs: build-and-push
     environment:
       name: staging
-      url: ${{ secrets.STAGING_URL }}
 
     steps:
       - name: 📥 Checkout code

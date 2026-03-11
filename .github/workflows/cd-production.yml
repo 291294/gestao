@@ -189,7 +189,6 @@ jobs:
     needs: [build-and-push, approval]
     environment:
       name: production
-      url: ${{ secrets.PROD_URL }}
 
     steps:
       - name: 📥 Checkout code
