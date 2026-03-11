@@ -100,8 +100,8 @@ Cliente → Orçamento → Pedido → Produção → Entrega → Faturamento →
 | ✅ | Analytics | Relatórios e KPIs |
 | ✅ | Dashboard | Dashboard com gráficos |
 | ✅ | Frontend | React SPA completa (11 telas) |
-| 🔜 | Docker | Containerização |
-| 🔜 | CI/CD | GitHub Actions |
+| ✅ | Docker | Containerização completa (PostgreSQL + Backend + Frontend) |
+| ✅ | CI/CD | Pipeline completo (Build, Test, Deploy, Rollback) |
 | 🔜 | Testes | Cobertura de testes automatizados |
 
 ## 🏗️ Arquitetura
@@ -127,12 +127,16 @@ Cliente → Orçamento → Pedido → Produção → Entrega → Faturamento →
 - **HTTP Client**: Axios (interceptors JWT automáticos)
 - **Roteamento**: react-router-dom 7
 
+### Infraestrutura Atual
+- **Containers**: Docker / Docker Compose ✅
+- **CI/CD**: GitHub Actions (Build, Test, Deploy, Rollback) ✅
+- **Monitoramento**: Spring Actuator ✅
+
 ### Infraestrutura Futura
 - **Cache**: Redis
 - **Mensageria**: RabbitMQ
-- **Containers**: Docker / Docker Compose
-- **CI/CD**: GitHub Actions
-- **Monitoramento**: Spring Actuator + Prometheus + Grafana
+- **APM**: Prometheus + Grafana
+- **Multi-region**: Deploy global
 
 ### Padrões de Design
 - **DDD-Lite** - Estrutura modular por domínio
@@ -286,7 +290,160 @@ mvn spring-boot:run
 - **Swagger UI**: http://localhost:8080/swagger-ui/index.html
 - **Health Check**: http://localhost:8080/api/actuator/health
 
-## 🔐 Autenticação
+## � Docker (Recomendado)
+
+> **Método mais rápido e fácil!** Use Docker para subir todo o sistema em 3 comandos.
+
+### Vantagens
+- ✅ Não precisa instalar PostgreSQL, Java ou Node.js
+- ✅ Ambiente isolado e idêntico ao de produção
+- ✅ Migrations executadas automaticamente
+- ✅ Health checks e restart automático
+- ✅ Frontend + Backend + PostgreSQL em uma única rede
+
+### Início Rápido com Docker
+
+```bash
+# 1. Clonar o repositório (se ainda não clonou)
+git clone <repository-url>
+cd erp-moveis
+
+# 2. (Opcional) Copiar e editar variáveis de ambiente
+cp .env.example .env
+
+# 3. Subir todo o sistema
+docker-compose up -d
+
+# 4. Ver logs em tempo real
+docker-compose logs -f
+```
+
+**Pronto!** Sistema completo rodando:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8080/api
+- **Swagger**: http://localhost:8080/swagger-ui/index.html
+- **PostgreSQL**: localhost:5432
+
+### Comandos Docker Úteis
+
+```bash
+# Ver status dos containers
+docker-compose ps
+
+# Parar tudo
+docker-compose down
+
+# Rebuild após mudanças no código
+docker-compose up -d --build
+
+# Ver logs de um serviço específico
+docker-compose logs -f backend
+
+# Resetar tudo (CUIDADO: apaga dados!)
+docker-compose down -v
+```
+
+### Documentação Completa Docker
+- [Guia Rápido Docker](../DOCKER-QUICKSTART.md)
+- [Documentação Completa](../DOCKER.md)
+- [Script de Gerenciamento PowerShell](../docker-manager.ps1)
+
+### Opcional: pgAdmin (Gerenciamento de Banco)
+
+```bash
+# Subir com pgAdmin incluído
+docker-compose --profile tools up -d
+
+# Acesso pgAdmin
+# URL: http://localhost:5050
+# Email: admin@erp-moveis.com
+# Senha: admin123
+```
+## 🚀 CI/CD Pipeline
+
+> **Pipeline completo de Continuous Integration e Continuous Deployment com GitHub Actions**
+
+### Workflows Implementados
+
+#### 1. CI - Build & Test (Automático)
+- ✅ Build do backend (Java 21 + Maven)
+- ✅ Testes automatizados (JUnit)
+- ✅ Build do frontend (React + Vite)
+- ✅ Lint check (ESLint)
+- ✅ Build das imagens Docker
+- ✅ Quality gate
+
+**Trigger**: Push em qualquer branch + Pull Requests
+
+#### 2. CD Staging (Automático)
+- ✅ Build & Push de imagens Docker
+- ✅ Deploy automático para staging
+- ✅ Health checks
+- ✅ Rollback automático se falhar
+
+**Trigger**: Push para branch `develop`
+
+#### 3. CD Production (Manual)
+- ✅ Validações pré-deploy
+- ✅ Build & Push de imagens Docker
+- ✅ **Aprovação manual obrigatória**
+- ✅ Backup da versão atual
+- ✅ Deploy para produção
+- ✅ Health checks rigorosos
+- ✅ Rollback automático se falhar
+
+**Trigger**: Push para branch `main` (com aprovação)
+
+#### 4. Rollback (Manual)
+- ✅ Rollback para versão anterior
+- ✅ Suporte staging e production
+- ✅ Aprovação obrigatória para production
+- ✅ Health checks pós-rollback
+
+**Trigger**: Manual (workflow_dispatch)
+
+### Ambientes
+
+| Ambiente | Branch | Deploy | Aprovação | URL |
+|----------|--------|--------|-----------|-----|
+| **Staging** | `develop` | Automático | ❌ Não | `STAGING_URL` |
+| **Production** | `main` | Manual | ✅ Sim | `PROD_URL` |
+
+### Configuração
+
+**Pré-requisitos**:
+1. Configurar GitHub Secrets (ver [.github/CICD-SECRETS.md](../.github/CICD-SECRETS.md))
+2. Configurar Environments no GitHub
+3. Preparar servidores de staging e production
+
+**Documentação Completa**:
+- 📚 [Pipeline CI/CD](../.github/README.md)
+- 🔐 [Configuração de Secrets](../.github/CICD-SECRETS.md)
+
+### Fluxo de Deploy
+
+```bash
+# 1. Desenvolvimento
+git checkout -b feature/nova-funcionalidade
+git commit -m "Nova funcionalidade"
+git push
+
+# 2. Pull Request → develop
+# CI roda automaticamente
+
+# 3. Merge → develop
+# Deploy automático para staging
+
+# 4. Teste em staging
+# Validação manual
+
+# 5. Merge develop → main
+# Aprovação manual necessária
+
+# 6. Deploy para production
+# Com health checks e rollback automático
+```
+## �🔐 Autenticação
 
 ### Login Padrão
 ```
@@ -437,9 +594,12 @@ mvn spring-boot:run
 - ✅ **Compilação**: 100% sucesso (backend + frontend)
 - ✅ **Vulnerabilidades**: 0 CVEs detectados
 - ✅ **Endpoints REST**: 50+ (protegidos por JWT)
-- ✅ **Migrations**: 22 (V1-V22)
+- ✅ **Migrations**: 23 (V1-V23)
 - ✅ **Tabelas**: 25+
 - ✅ **Telas Frontend**: 11 módulos + Dashboard
+- ✅ **Containerização**: Docker compose multi-stage builds (PostgreSQL + Backend + Frontend)
+- ✅ **CI/CD**: GitHub Actions (4 workflows: CI, CD Staging, CD Production, Rollback)
+- ✅ **Deployment**: Automação completa com aprovações e rollback
 - ✅ **Cobertura de Testes**: Em desenvolvimento
 
 ## 🛡️ Segurança

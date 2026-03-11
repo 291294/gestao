@@ -1,0 +1,428 @@
+# ============================================================================
+# CD Pipeline - Production Deployment
+# ============================================================================
+# Triggers: push para branch main (com aprovação manual)
+# Deploy para: Ambiente de Produção
+# Requer: Aprovação manual + Health checks
+# ============================================================================
+
+name: CD - Deploy to Production
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (tag or sha)'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip tests (NOT recommended)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ${{ github.repository }}/backend
+  IMAGE_FRONTEND: ${{ github.repository }}/frontend
+  ENVIRONMENT: production
+
+jobs:
+  # ==========================================================================
+  # Pre-deployment Validation
+  # ==========================================================================
+  pre-deployment-checks:
+    name: Pre-deployment Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ✅ Validate Configuration
+        run: |
+          echo "🔍 Validating deployment configuration..."
+          
+          # Check if required secrets are set (via GitHub API or manual verification)
+          if [ -z "${{ secrets.PROD_HOST }}" ]; then
+            echo "❌ PROD_HOST secret not set"
+            exit 1
+          fi
+          
+          echo "✅ Configuration validated"
+
+      - name: 📊 Check Staging Health
+        run: |
+          echo "🏥 Checking staging environment health..."
+          if curl -f ${{ secrets.STAGING_API_URL }}/actuator/health; then
+            echo "✅ Staging is healthy"
+          else
+            echo "⚠️  Staging health check failed - proceed with caution!"
+          fi
+
+  # ==========================================================================
+  # Build & Push Production Images
+  # ==========================================================================
+  build-and-push:
+    name: Build & Push Production Images
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+    permissions:
+      contents: read
+      packages: write
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏷️ Generate version tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          elif [[ -n "${{ inputs.version }}" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="prod-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "📦 Production Version: ${VERSION}"
+
+      - name: 🔐 Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Backend
+      - name: 🏷️ Extract Backend metadata
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BACKEND }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=production-latest
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: 🔨 Build & Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./erp-moveis
+          file: ./erp-moveis/Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            ENVIRONMENT=production
+
+      # Frontend
+      - name: 🏷️ Extract Frontend metadata
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_FRONTEND }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=production-latest
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: 🔨 Build & Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./erp-frontend
+          file: ./erp-frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            VITE_API_URL=${{ secrets.PROD_API_URL }}
+
+  # ==========================================================================
+  # Manual Approval Gate
+  # ==========================================================================
+  approval:
+    name: 🔐 Manual Approval Required
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment:
+      name: production-approval
+    
+    steps:
+      - name: ⏸️ Waiting for approval
+        run: |
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║          🔐 MANUAL APPROVAL REQUIRED                     ║"
+          echo "╚══════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "📦 Version: ${{ needs.build-and-push.outputs.version }}"
+          echo "🌍 Environment: PRODUCTION"
+          echo "⏰ Waiting for manual approval..."
+
+  # ==========================================================================
+  # Deploy to Production
+  # ==========================================================================
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-push, approval]
+    environment:
+      name: production
+      url: ${{ secrets.PROD_URL }}
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 💾 Backup Current Version
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT || 22 }}
+          script: |
+            echo "💾 Creating backup of current deployment..."
+            mkdir -p ~/erp-backups
+            cd ~/erp-production
+            
+            # Backup docker-compose and current version info
+            cp docker-compose.yml ~/erp-backups/docker-compose.yml.$(date +%Y%m%d-%H%M%S)
+            docker-compose config > ~/erp-backups/config-backup-$(date +%Y%m%d-%H%M%S).yml
+            
+            # Save current image tags
+            docker-compose images > ~/erp-backups/images-$(date +%Y%m%d-%H%M%S).txt
+            
+            echo "✅ Backup completed"
+
+      - name: 🚀 Deploy to Production
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          VERSION: ${{ needs.build-and-push.outputs.version }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_BACKEND: ${{ env.IMAGE_BACKEND }}
+          IMAGE_FRONTEND: ${{ env.IMAGE_FRONTEND }}
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT || 22 }}
+          envs: VERSION,REGISTRY,IMAGE_BACKEND,IMAGE_FRONTEND
+          script: |
+            echo "╔══════════════════════════════════════════════════════════╗"
+            echo "║          🚀 PRODUCTION DEPLOYMENT STARTING               ║"
+            echo "╚══════════════════════════════════════════════════════════╝"
+            echo ""
+            echo "📦 Version: ${VERSION}"
+            echo "🕐 Time: $(date)"
+            
+            # Create production directory
+            mkdir -p ~/erp-production
+            cd ~/erp-production
+            
+            # Login to registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+            
+            # Pull production images
+            echo "📥 Pulling images..."
+            docker pull ${REGISTRY}/${IMAGE_BACKEND}:${VERSION}
+            docker pull ${REGISTRY}/${IMAGE_FRONTEND}:${VERSION}
+            
+            # Update docker-compose with production config
+            cat > docker-compose.yml << 'EOF'
+            version: '3.8'
+            
+            networks:
+              erp-network:
+                driver: bridge
+            
+            volumes:
+              postgres-data:
+              postgres-backups:
+            
+            services:
+              postgres:
+                image: postgres:17-alpine
+                environment:
+                  POSTGRES_DB: ${{ secrets.PROD_DB_NAME }}
+                  POSTGRES_USER: ${{ secrets.PROD_DB_USER }}
+                  POSTGRES_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
+                volumes:
+                  - postgres-data:/var/lib/postgresql/data
+                  - postgres-backups:/backups
+                networks:
+                  - erp-network
+                restart: always
+                healthcheck:
+                  test: ["CMD-SHELL", "pg_isready -U ${{ secrets.PROD_DB_USER }}"]
+                  interval: 10s
+                  timeout: 5s
+                  retries: 5
+              
+              backend:
+                image: ${REGISTRY}/${IMAGE_BACKEND}:${VERSION}
+                environment:
+                  SPRING_PROFILES_ACTIVE: prod
+                  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${{ secrets.PROD_DB_NAME }}
+                  SPRING_DATASOURCE_USERNAME: ${{ secrets.PROD_DB_USER }}
+                  SPRING_DATASOURCE_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
+                  JWT_SECRET: ${{ secrets.PROD_JWT_SECRET }}
+                  JWT_EXPIRATION: ${{ secrets.PROD_JWT_EXPIRATION }}
+                  JAVA_OPTS: "-Xms1024m -Xmx2048m -XX:+UseG1GC"
+                ports:
+                  - "8080:8080"
+                networks:
+                  - erp-network
+                depends_on:
+                  postgres:
+                    condition: service_healthy
+                restart: always
+                healthcheck:
+                  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/actuator/health"]
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+                  start_period: 90s
+              
+              frontend:
+                image: ${REGISTRY}/${IMAGE_FRONTEND}:${VERSION}
+                ports:
+                  - "3000:80"
+                networks:
+                  - erp-network
+                depends_on:
+                  - backend
+                restart: always
+                healthcheck:
+                  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+                  interval: 30s
+                  timeout: 5s
+                  retries: 3
+            EOF
+            
+            # Blue-Green deployment strategy
+            echo "🔄 Performing rolling update..."
+            docker-compose up -d --no-deps --build
+            
+            # Wait for health checks
+            echo "⏳ Waiting for services to be healthy..."
+            sleep 45
+            
+            # Verify deployment
+            if docker-compose ps | grep -q "Up"; then
+              echo "✅ Deployment successful!"
+              
+              # Cleanup old images
+              docker image prune -af --filter "until=168h"
+            else
+              echo "❌ Deployment verification failed!"
+              exit 1
+            fi
+
+      - name: 🏥 Production Health Check
+        run: |
+          echo "🏥 Running production health checks..."
+          sleep 30
+          
+          # Backend health
+          for i in {1..15}; do
+            if curl -f ${{ secrets.PROD_API_URL }}/actuator/health; then
+              echo "✅ Backend is healthy"
+              BACKEND_HEALTHY=true
+              break
+            fi
+            echo "⏳ Backend check $i/15 - waiting..."
+            sleep 10
+          done
+          
+          if [ "$BACKEND_HEALTHY" != "true" ]; then
+            echo "❌ Backend health check failed!"
+            exit 1
+          fi
+          
+          # Frontend health
+          if curl -f ${{ secrets.PROD_URL }}; then
+            echo "✅ Frontend is healthy"
+          else
+            echo "❌ Frontend health check failed!"
+            exit 1
+          fi
+          
+          echo "✅ All production health checks passed!"
+
+      - name: 📊 Create Deployment Record
+        if: success()
+        run: |
+          echo "📊 Recording deployment..."
+          cat > deployment-record.json << EOF
+          {
+            "version": "${{ needs.build-and-push.outputs.version }}",
+            "environment": "production",
+            "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "deployed_by": "${{ github.actor }}",
+            "commit": "${{ github.sha }}",
+            "status": "success"
+          }
+          EOF
+          cat deployment-record.json
+
+      - name: 🎉 Deployment Success Notification
+        if: success()
+        run: |
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║      🎉 PRODUCTION DEPLOYMENT SUCCESSFUL! 🎉             ║"
+          echo "╚══════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "🌐 URL: ${{ secrets.PROD_URL }}"
+          echo "📦 Version: ${{ needs.build-and-push.outputs.version }}"
+          echo "👤 Deployed by: ${{ github.actor }}"
+          echo "🕐 Time: $(date)"
+          echo "📊 Commit: ${{ github.sha }}"
+
+      - name: 🔴 Rollback on Failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT || 22 }}
+          script: |
+            echo "╔══════════════════════════════════════════════════════════╗"
+            echo "║              🔴 AUTOMATIC ROLLBACK                       ║"
+            echo "╚══════════════════════════════════════════════════════════╝"
+            
+            cd ~/erp-production
+            
+            # Restore from latest backup
+            LATEST_BACKUP=$(ls -t ~/erp-backups/docker-compose.yml.* | head -1)
+            if [ -f "$LATEST_BACKUP" ]; then
+              echo "📦 Restoring from: $LATEST_BACKUP"
+              cp "$LATEST_BACKUP" docker-compose.yml
+              docker-compose down
+              docker-compose up -d
+              echo "✅ Rollback completed"
+            else
+              echo "❌ No backup found for rollback!"
+            fi

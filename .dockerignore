@@ -1,0 +1,53 @@
+# Maven
+target/
+!target/*.jar
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.metadata/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+AUTENTICACAO.md
+RELATORIO_COMPLETO.md
+RELATORIO_AUDITORIA_COMPLETO.md
+.github/
+
+# Database
+*.sql
+!src/main/resources/db/migration/*.sql
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Other
+*.md
+Dockerfile
+.dockerignore
+docker-compose.yml

@@ -1,0 +1,301 @@
+# ============================================================================
+# Rollback Workflow - Manual ou Automático
+# ============================================================================
+# Permite rollback para versão anterior em caso de problemas
+# ============================================================================
+
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: 'Version to rollback to (optional - uses previous if empty)'
+        required: false
+        type: string
+      reason:
+        description: 'Reason for rollback'
+        required: true
+        type: string
+
+jobs:
+  # ==========================================================================
+  # Validate Rollback Request
+  # ==========================================================================
+  validate-rollback:
+    name: Validate Rollback Request
+    runs-on: ubuntu-latest
+    
+    outputs:
+      environment: ${{ inputs.environment }}
+      version: ${{ steps.determine-version.outputs.version }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Determine rollback version
+        id: determine-version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+            echo "Using specified version: ${VERSION}"
+          else
+            # Get previous version from deployment history
+            # This would query your deployment tracking system
+            VERSION="previous"
+            echo "Using previous version"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: ⚠️ Rollback Notice
+        run: |
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║              ⚠️  ROLLBACK INITIATED                      ║"
+          echo "╚══════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "🌍 Environment: ${{ inputs.environment }}"
+          echo "📦 Target Version: ${{ steps.determine-version.outputs.version }}"
+          echo "👤 Initiated by: ${{ github.actor }}"
+          echo "📝 Reason: ${{ inputs.reason }}"
+          echo "🕐 Time: $(date)"
+
+  # ==========================================================================
+  # Rollback Staging
+  # ==========================================================================
+  rollback-staging:
+    name: Rollback Staging
+    runs-on: ubuntu-latest
+    needs: validate-rollback
+    if: inputs.environment == 'staging'
+    environment:
+      name: staging
+    
+    steps:
+      - name: 🔄 Execute Rollback
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_PORT || 22 }}
+          script: |
+            echo "🔄 Rolling back STAGING environment..."
+            cd ~/erp-staging
+            
+            # Find latest backup
+            LATEST_BACKUP=$(ls -t ~/erp-backups/staging-docker-compose.yml.* 2>/dev/null | head -1)
+            
+            if [ -f "$LATEST_BACKUP" ]; then
+              echo "📦 Restoring from: $LATEST_BACKUP"
+              
+              # Stop current deployment
+              docker-compose down
+              
+              # Restore backup
+              cp "$LATEST_BACKUP" docker-compose.yml
+              
+              # Restart with previous version
+              docker-compose up -d
+              
+              echo "✅ Rollback completed"
+              docker-compose ps
+            else
+              echo "❌ No backup found!"
+              exit 1
+            fi
+
+      - name: 🏥 Health Check After Rollback
+        run: |
+          echo "🏥 Verifying rollback health..."
+          sleep 30
+          
+          if curl -f ${{ secrets.STAGING_API_URL }}/actuator/health; then
+            echo "✅ Staging is healthy after rollback"
+          else
+            echo "❌ Health check failed after rollback!"
+            exit 1
+          fi
+
+  # ==========================================================================
+  # Rollback Production (Requires Approval)
+  # ==========================================================================
+  rollback-production-approval:
+    name: 🔐 Production Rollback Approval
+    runs-on: ubuntu-latest
+    needs: validate-rollback
+    if: inputs.environment == 'production'
+    environment:
+      name: production-rollback-approval
+    
+    steps:
+      - name: ⏸️ Waiting for approval
+        run: |
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║      🔐 PRODUCTION ROLLBACK APPROVAL REQUIRED            ║"
+          echo "╚══════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "⚠️  CRITICAL: Production rollback requested"
+          echo "📝 Reason: ${{ inputs.reason }}"
+          echo "👤 Requested by: ${{ github.actor }}"
+          echo ""
+          echo "⏰ Waiting for approval..."
+
+  rollback-production:
+    name: Rollback Production
+    runs-on: ubuntu-latest
+    needs: [validate-rollback, rollback-production-approval]
+    if: inputs.environment == 'production'
+    environment:
+      name: production
+    
+    steps:
+      - name: 💾 Create Pre-Rollback Snapshot
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT || 22 }}
+          script: |
+            echo "💾 Creating snapshot before rollback..."
+            mkdir -p ~/erp-backups/pre-rollback
+            cd ~/erp-production
+            
+            # Save current state
+            docker-compose config > ~/erp-backups/pre-rollback/snapshot-$(date +%Y%m%d-%H%M%S).yml
+            docker-compose images > ~/erp-backups/pre-rollback/images-$(date +%Y%m%d-%H%M%S).txt
+            
+            echo "✅ Snapshot created"
+
+      - name: 🔄 Execute Production Rollback
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT || 22 }}
+          script: |
+            echo "╔══════════════════════════════════════════════════════════╗"
+            echo "║          🔄 PRODUCTION ROLLBACK EXECUTING                ║"
+            echo "╚══════════════════════════════════════════════════════════╝"
+            
+            cd ~/erp-production
+            
+            # Find appropriate backup
+            if [ -n "${{ inputs.version }}" ]; then
+              # Rollback to specific version
+              BACKUP_FILE=$(ls ~/erp-backups/docker-compose.yml.* | grep "${{ inputs.version }}" | head -1)
+            else
+              # Rollback to latest backup
+              BACKUP_FILE=$(ls -t ~/erp-backups/docker-compose.yml.* | head -1)
+            fi
+            
+            if [ -f "$BACKUP_FILE" ]; then
+              echo "📦 Rolling back to: $BACKUP_FILE"
+              
+              # Graceful shutdown
+              echo "⏸️  Stopping current deployment..."
+              docker-compose down --timeout 30
+              
+              # Restore backup configuration
+              cp "$BACKUP_FILE" docker-compose.yml
+              
+              # Start with previous version
+              echo "🚀 Starting previous version..."
+              docker-compose up -d
+              
+              # Wait for services
+              echo "⏳ Waiting for services to start..."
+              sleep 60
+              
+              # Verify
+              if docker-compose ps | grep -q "Up"; then
+                echo "✅ Rollback completed successfully"
+                docker-compose ps
+              else
+                echo "❌ Rollback failed - services not running"
+                exit 1
+              fi
+            else
+              echo "❌ Backup file not found!"
+              exit 1
+            fi
+
+      - name: 🏥 Production Health Check
+        run: |
+          echo "🏥 Running production health checks after rollback..."
+          sleep 30
+          
+          # Backend health
+          for i in {1..10}; do
+            if curl -f ${{ secrets.PROD_API_URL }}/actuator/health; then
+              echo "✅ Backend is healthy"
+              BACKEND_HEALTHY=true
+              break
+            fi
+            echo "⏳ Backend check $i/10..."
+            sleep 10
+          done
+          
+          if [ "$BACKEND_HEALTHY" != "true" ]; then
+            echo "❌ Backend health check failed after rollback!"
+            exit 1
+          fi
+          
+          # Frontend health
+          if curl -f ${{ secrets.PROD_URL }}; then
+            echo "✅ Frontend is healthy"
+          else
+            echo "❌ Frontend health check failed after rollback!"
+            exit 1
+          fi
+          
+          echo "✅ All health checks passed after rollback"
+
+      - name: 📊 Create Rollback Record
+        if: success()
+        run: |
+          echo "📊 Recording rollback event..."
+          cat > rollback-record.json << EOF
+          {
+            "environment": "${{ inputs.environment }}",
+            "rollback_version": "${{ needs.validate-rollback.outputs.version }}",
+            "reason": "${{ inputs.reason }}",
+            "rolled_back_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "rolled_back_by": "${{ github.actor }}",
+            "status": "success"
+          }
+          EOF
+          cat rollback-record.json
+
+      - name: ✅ Rollback Success
+        if: success()
+        run: |
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║          ✅ ROLLBACK COMPLETED SUCCESSFULLY              ║"
+          echo "╚══════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "🌍 Environment: ${{ inputs.environment }}"
+          echo "📦 Version: ${{ needs.validate-rollback.outputs.version }}"
+          echo "👤 Executed by: ${{ github.actor }}"
+          echo "📝 Reason: ${{ inputs.reason }}"
+          echo "🕐 Completed: $(date)"
+
+      - name: ❌ Rollback Failed
+        if: failure()
+        run: |
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║              ❌ ROLLBACK FAILED                          ║"
+          echo "╚══════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "⚠️  CRITICAL: Rollback failed!"
+          echo "🔴 Manual intervention required"
+          echo "📞 Contact DevOps team immediately"
