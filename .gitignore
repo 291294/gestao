@@ -102,3 +102,6 @@ logs/
 *~.nib
 
 update_admin_password.sql
+
+# Secrets temporários
+secrets-temp.txt
