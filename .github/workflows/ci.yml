@@ -64,13 +64,11 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: 🔨 Build Backend
-        working-directory: ./erp-moveis
         run: |
           echo "🔨 Building Spring Boot application..."
           mvn clean compile -B -DskipTests
 
       - name: 🧪 Run Tests
-        working-directory: ./erp-moveis
         env:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/erp_moveis_test
           SPRING_DATASOURCE_USERNAME: postgres
@@ -80,7 +78,6 @@ jobs:
           mvn test -B
 
       - name: 📦 Package JAR
-        working-directory: ./erp-moveis
         run: |
           echo "📦 Packaging application..."
           mvn package -B -DskipTests
@@ -90,14 +87,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-test-results
-          path: erp-moveis/target/surefire-reports/
+          path: target/surefire-reports/
           retention-days: 30
 
       - name: 📦 Upload JAR Artifact
         uses: actions/upload-artifact@v4
         with:
           name: backend-jar
-          path: erp-moveis/target/*.jar
+          path: target/*.jar
           retention-days: 7
 
   # ==========================================================================
@@ -111,7 +108,13 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
+      - name: � Checkout Frontend
+        uses: actions/checkout@v4
+        with:
+          repository: 291294/erp-frontend
+          path: erp-frontend
+
+      - name: �🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -166,11 +169,17 @@ jobs:
       - name: 🐳 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: � Checkout Frontend
+        uses: actions/checkout@v4
+        with:
+          repository: 291294/erp-frontend
+          path: erp-frontend
+
       - name: 🔨 Build Backend Image
         uses: docker/build-push-action@v5
         with:
-          context: ./erp-moveis
-          file: ./erp-moveis/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: false
           tags: erp-backend:test
           cache-from: type=gha

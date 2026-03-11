@@ -82,6 +82,12 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
+      - name: 📥 Checkout Frontend
+        uses: actions/checkout@v4
+        with:
+          repository: 291294/erp-frontend
+          path: erp-frontend
+
       - name: 🏷️ Generate version tag
         id: version
         run: |
@@ -121,8 +127,8 @@ jobs:
       - name: 🔨 Build & Push Backend
         uses: docker/build-push-action@v5
         with:
-          context: ./erp-moveis
-          file: ./erp-moveis/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: true
           tags: ${{ steps.meta-backend.outputs.tags }}
           labels: ${{ steps.meta-backend.outputs.labels }}
