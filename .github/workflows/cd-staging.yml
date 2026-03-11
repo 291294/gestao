@@ -43,12 +43,6 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 📥 Checkout Frontend
-        uses: actions/checkout@v4
-        with:
-          repository: 291294/erp-frontend
-          path: erp-frontend
-
       - name: 🏷️ Generate version tag
         id: version
         run: |
