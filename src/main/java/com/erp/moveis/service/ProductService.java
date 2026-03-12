@@ -3,6 +3,8 @@ package com.erp.moveis.service;
 import com.erp.moveis.model.Product;
 import com.erp.moveis.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ public class ProductService {
     @Autowired
     private ProductRepository repository;
 
+    @Cacheable("products")
     public List<Product> list() {
         return repository.findAll();
     }
@@ -28,14 +31,17 @@ public class ProductService {
         return repository.findById(id);
     }
 
+    @CacheEvict(value = "products", allEntries = true)
     public Product save(Product product) {
         return repository.save(product);
     }
 
+    @CacheEvict(value = "products", allEntries = true)
     public void delete(Long id) {
         repository.deleteById(id);
     }
 
+    @CacheEvict(value = "products", allEntries = true)
     public Product update(Long id, Product productDetails) {
         Optional<Product> product = repository.findById(id);
         if (product.isPresent()) {
