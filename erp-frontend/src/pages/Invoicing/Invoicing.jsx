@@ -7,6 +7,7 @@ import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import { Add, Send, Cancel as CancelIcon, Receipt } from "@mui/icons-material";
 import api from "../../api/apiClient";
 import { useAuth } from "../../auth/AuthContext";
+import { useSnackbar } from "../../components/SnackbarProvider";
 
 const statusColor = { DRAFT: "default", ISSUED: "info", SENT: "primary", PAID: "success", PARTIALLY_PAID: "warning", OVERDUE: "error", CANCELLED: "default" };
 
@@ -19,6 +20,7 @@ export default function Invoicing() {
   const [form, setForm] = useState({ clientId: "", dueDate: "", notes: "", items: [] });
   const [items, setItems] = useState([{ productId: "", description: "", quantity: "", unitPrice: "" }]);
   const [saving, setSaving] = useState(false);
+  const { showSuccess, showError } = useSnackbar();
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -47,14 +49,15 @@ export default function Invoicing() {
       };
       await api.post("/invoices", payload);
       setOpen(false);
+      showSuccess("Fatura criada com sucesso!");
       fetchData();
-    } catch (err) { alert(err.response?.data?.message || "Erro ao criar fatura"); }
+    } catch (err) { showError(err.response?.data?.message || "Erro ao criar fatura"); }
     finally { setSaving(false); }
   };
 
   const handleAction = async (id, action) => {
-    try { await api.post(`/invoices/${id}/${action}`); fetchData(); }
-    catch (err) { alert(err.response?.data?.message || "Erro"); }
+    try { await api.post(`/invoices/${id}/${action}`); showSuccess("Operação realizada com sucesso!"); fetchData(); }
+    catch (err) { showError(err.response?.data?.message || "Erro"); }
   };
 
   const columns = [

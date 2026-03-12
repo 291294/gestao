@@ -22,20 +22,29 @@ import {
   BarChart as AnalyticsIcon,
   People as ClientsIcon,
   RequestQuote as QuotesIcon,
+  Category as ProductsIcon,
+  LocalShipping as DeliveriesIcon,
+  Percent as CommissionsIcon,
+  TrackChanges as TargetsIcon,
 } from "@mui/icons-material";
+import { useAuth } from "../auth/AuthContext";
 
 const DRAWER_WIDTH = 260;
 
 const menuItems = [
   { text: "Dashboard", icon: <DashboardIcon />, path: "/" },
   { text: "Clientes", icon: <ClientsIcon />, path: "/clientes" },
+  { text: "Produtos", icon: <ProductsIcon />, path: "/produtos" },
   { text: "Orçamentos", icon: <QuotesIcon />, path: "/orcamentos" },
   { text: "Pedidos", icon: <OrdersIcon />, path: "/pedidos" },
   { text: "Estoque", icon: <InventoryIcon />, path: "/estoque" },
   { text: "Armazéns", icon: <WarehouseIcon />, path: "/armazens" },
   { text: "Produção", icon: <ManufacturingIcon />, path: "/producao" },
+  { text: "Entregas", icon: <DeliveriesIcon />, path: "/entregas" },
   { text: "Faturamento", icon: <InvoiceIcon />, path: "/faturamento" },
   { text: "Pagamentos", icon: <PaymentsIcon />, path: "/pagamentos" },
+  { text: "Comissões", icon: <CommissionsIcon />, path: "/comissoes" },
+  { text: "Metas de Vendas", icon: <TargetsIcon />, path: "/metas" },
   { text: "Notificações", icon: <NotificationsIcon />, path: "/notificacoes" },
   { text: "Analytics", icon: <AnalyticsIcon />, path: "/analytics" },
 ];
@@ -45,6 +54,9 @@ export { DRAWER_WIDTH };
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { checkRoute } = useAuth();
+
+  const visibleItems = menuItems.filter((item) => checkRoute(item.path));
 
   return (
     <Drawer
@@ -75,7 +87,7 @@ export default function Sidebar() {
       <Divider sx={{ borderColor: "rgba(255,255,255,0.1)" }} />
 
       <List sx={{ px: 1, mt: 1 }}>
-        {menuItems.map((item) => {
+        {visibleItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <ListItemButton

@@ -7,6 +7,7 @@ import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import { Add, Edit, Delete } from "@mui/icons-material";
 import api from "../../api/apiClient";
 import { useAuth } from "../../auth/AuthContext";
+import { useSnackbar } from "../../components/SnackbarProvider";
 
 export default function Clients() {
   const { checkPermission } = useAuth();
@@ -16,6 +17,7 @@ export default function Clients() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", profession: "", preferences: "" });
   const [saving, setSaving] = useState(false);
+  const { showSuccess, showError } = useSnackbar();
 
   const canCreate = checkPermission("client", "create");
   const canEdit = checkPermission("client", "update");
@@ -45,14 +47,15 @@ export default function Clients() {
       if (editing) await api.put(`/clients/${editing.id}`, form);
       else await api.post("/clients", form);
       setOpen(false);
+      showSuccess(editing ? "Cliente atualizado com sucesso!" : "Cliente criado com sucesso!");
       fetchData();
-    } catch (err) { alert(err.response?.data?.message || "Erro ao salvar"); }
+    } catch (err) { showError(err.response?.data?.message || "Erro ao salvar"); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Excluir este cliente?")) return;
-    try { await api.delete(`/clients/${id}`); fetchData(); } catch (err) { alert(err.response?.data?.message || "Erro"); }
+    try { await api.delete(`/clients/${id}`); showSuccess("Cliente excluído com sucesso!"); fetchData(); } catch (err) { showError(err.response?.data?.message || "Erro"); }
   };
 
   const columns = [

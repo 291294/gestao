@@ -4,35 +4,38 @@ const ROLE_PERMISSIONS = {
   ADMIN: { routes: "*", permissions: "*" },
   GERENTE: {
     routes: [
-      "/", "/clientes", "/orcamentos", "/pedidos", "/estoque",
-      "/armazens", "/producao", "/faturamento", "/pagamentos",
-      "/notificacoes", "/analytics",
+      "/", "/clientes", "/produtos", "/orcamentos", "/pedidos", "/estoque",
+      "/armazens", "/producao", "/entregas", "/faturamento", "/pagamentos",
+      "/comissoes", "/metas", "/notificacoes", "/analytics",
     ],
     permissions: "*",
   },
   VENDEDOR: {
-    routes: ["/", "/clientes", "/orcamentos", "/pedidos", "/notificacoes"],
+    routes: ["/", "/clientes", "/produtos", "/orcamentos", "/pedidos", "/comissoes", "/metas", "/notificacoes"],
     permissions: [
       "client.list", "client.view", "client.create", "client.update",
+      "product.list", "product.view",
       "order.list", "order.view", "order.create", "order.update",
     ],
   },
   FINANCEIRO: {
-    routes: ["/", "/faturamento", "/pagamentos", "/analytics", "/notificacoes"],
+    routes: ["/", "/faturamento", "/pagamentos", "/comissoes", "/analytics", "/notificacoes"],
     permissions: [
       "invoice.list", "invoice.view", "invoice.create", "invoice.generate",
       "payment.list", "payment.view", "payment.create", "payment.approve",
+      "commission.list", "commission.view", "commission.approve",
     ],
   },
   LOGISTICA: {
-    routes: ["/", "/estoque", "/armazens", "/notificacoes"],
+    routes: ["/", "/estoque", "/armazens", "/entregas", "/notificacoes"],
     permissions: [
       "delivery.list", "delivery.view", "delivery.create", "delivery.schedule", "delivery.complete",
+      "inventory.list", "inventory.view",
     ],
   },
   PRODUCAO: {
-    routes: ["/", "/producao", "/estoque", "/armazens", "/notificacoes"],
-    permissions: ["report.production"],
+    routes: ["/", "/producao", "/produtos", "/estoque", "/armazens", "/notificacoes"],
+    permissions: ["report.production", "product.list", "product.view"],
   },
 };
 

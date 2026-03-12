@@ -16,6 +16,11 @@ import Invoicing from "./pages/Invoicing/Invoicing";
 import Payments from "./pages/Payments/Payments";
 import Notifications from "./pages/Notifications/Notifications";
 import Analytics from "./pages/Analytics/Analytics";
+import Products from "./pages/Products/Products";
+import Deliveries from "./pages/Deliveries/Deliveries";
+import Commissions from "./pages/Commissions/Commissions";
+import SalesTargets from "./pages/SalesTargets/SalesTargets";
+import SnackbarProvider from "./components/SnackbarProvider";
 
 const theme = createTheme({
   palette: {
@@ -75,6 +80,10 @@ function AppRoutes() {
                   <Route path="/pagamentos" element={<Payments />} />
                   <Route path="/notificacoes" element={<Notifications />} />
                   <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/produtos" element={<Products />} />
+                  <Route path="/entregas" element={<Deliveries />} />
+                  <Route path="/comissoes" element={<Commissions />} />
+                  <Route path="/metas" element={<SalesTargets />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Box>
@@ -90,11 +99,13 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
+      <SnackbarProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </BrowserRouter>
+      </SnackbarProvider>
     </ThemeProvider>
   );
 }

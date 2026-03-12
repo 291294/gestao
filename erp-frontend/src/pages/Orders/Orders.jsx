@@ -7,6 +7,7 @@ import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import { Add, Edit, Delete, Cancel as CancelIcon } from "@mui/icons-material";
 import api from "../../api/apiClient";
 import { useAuth } from "../../auth/AuthContext";
+import { useSnackbar } from "../../components/SnackbarProvider";
 
 const STATUS_OPTIONS = ["PENDING", "CONFIRMED", "DELIVERED", "CANCELLED"];
 const statusColor = { PENDING: "warning", CONFIRMED: "info", DELIVERED: "success", CANCELLED: "error" };
@@ -23,6 +24,7 @@ export default function Orders() {
   const [form, setForm] = useState({ clientId: "", status: "PENDING" });
   const [items, setItems] = useState([{ ...emptyItem }]);
   const [saving, setSaving] = useState(false);
+  const { showSuccess, showError } = useSnackbar();
 
   const canCreate = checkPermission("order", "create");
   const canEdit = checkPermission("order", "update");
@@ -71,20 +73,21 @@ export default function Orders() {
       if (editing) await api.put(`/orders/${editing.id}`, payload);
       else await api.post("/orders", payload);
       setOpen(false);
+      showSuccess(editing ? "Pedido atualizado com sucesso!" : "Pedido criado com sucesso!");
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || "Erro ao salvar pedido");
+      showError(err.response?.data?.message || "Erro ao salvar pedido");
     } finally { setSaving(false); }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Excluir este pedido?")) return;
-    try { await api.delete(`/orders/${id}`); fetchData(); } catch (err) { alert(err.response?.data?.message || "Erro ao excluir"); }
+    try { await api.delete(`/orders/${id}`); showSuccess("Pedido excluído com sucesso!"); fetchData(); } catch (err) { showError(err.response?.data?.message || "Erro ao excluir"); }
   };
 
   const handleCancel = async (id) => {
     if (!window.confirm("Cancelar este pedido?")) return;
-    try { await api.post(`/orders/${id}/cancel`); fetchData(); } catch (err) { alert(err.response?.data?.message || "Erro ao cancelar"); }
+    try { await api.post(`/orders/${id}/cancel`); showSuccess("Pedido cancelado com sucesso!"); fetchData(); } catch (err) { showError(err.response?.data?.message || "Erro ao cancelar"); }
   };
 
   const updateItem = (idx, field, val) => { const n = [...items]; n[idx] = { ...n[idx], [field]: val }; setItems(n); };

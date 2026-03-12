@@ -7,6 +7,7 @@ import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import { Add, PlayArrow, CheckCircle } from "@mui/icons-material";
 import api from "../../api/apiClient";
 import { useAuth } from "../../auth/AuthContext";
+import { useSnackbar } from "../../components/SnackbarProvider";
 
 const statusColor = { CREATED: "default", IN_PROGRESS: "info", FINISHED: "success", CANCELLED: "error" };
 
@@ -17,6 +18,7 @@ export default function Manufacturing() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ productId: "", quantity: "" });
   const [saving, setSaving] = useState(false);
+  const { showSuccess, showError } = useSnackbar();
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -33,19 +35,20 @@ export default function Manufacturing() {
     try {
       await api.post(`/manufacturing/production-order?companyId=${companyId}&productId=${form.productId}&quantity=${form.quantity}`);
       setOpen(false);
+      showSuccess("Ordem de produção criada com sucesso!");
       fetchData();
-    } catch (err) { alert(err.response?.data?.message || "Erro ao criar OP"); }
+    } catch (err) { showError(err.response?.data?.message || "Erro ao criar OP"); }
     finally { setSaving(false); }
   };
 
   const handleStart = async (id) => {
-    try { await api.post(`/manufacturing/production-order/${id}/start`); fetchData(); }
-    catch (err) { alert(err.response?.data?.message || "Erro ao iniciar"); }
+    try { await api.post(`/manufacturing/production-order/${id}/start`); showSuccess("Produção iniciada com sucesso!"); fetchData(); }
+    catch (err) { showError(err.response?.data?.message || "Erro ao iniciar"); }
   };
 
   const handleFinish = async (id) => {
-    try { await api.post(`/manufacturing/production-order/${id}/finish`); fetchData(); }
-    catch (err) { alert(err.response?.data?.message || "Erro ao finalizar"); }
+    try { await api.post(`/manufacturing/production-order/${id}/finish`); showSuccess("Produção finalizada com sucesso!"); fetchData(); }
+    catch (err) { showError(err.response?.data?.message || "Erro ao finalizar"); }
   };
 
   const columns = [

@@ -7,6 +7,7 @@ import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import { Add, CheckCircle, Cancel as CancelIcon, Undo } from "@mui/icons-material";
 import api from "../../api/apiClient";
 import { useAuth } from "../../auth/AuthContext";
+import { useSnackbar } from "../../components/SnackbarProvider";
 
 const METHODS = ["CASH", "CREDIT_CARD", "DEBIT_CARD", "BANK_TRANSFER", "PIX", "BOLETO", "CHECK"];
 const methodLabel = { CASH: "Dinheiro", CREDIT_CARD: "Crédito", DEBIT_CARD: "Débito", BANK_TRANSFER: "Transferência", PIX: "PIX", BOLETO: "Boleto", CHECK: "Cheque" };
@@ -19,6 +20,7 @@ export default function Payments() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ invoiceId: "", amount: "", paymentMethod: "PIX", notes: "" });
   const [saving, setSaving] = useState(false);
+  const { showSuccess, showError } = useSnackbar();
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -35,14 +37,15 @@ export default function Payments() {
     try {
       await api.post("/payments", { companyId, invoiceId: Number(form.invoiceId), amount: Number(form.amount), paymentMethod: form.paymentMethod, notes: form.notes });
       setOpen(false);
+      showSuccess("Pagamento criado com sucesso!");
       fetchData();
-    } catch (err) { alert(err.response?.data?.message || "Erro ao criar pagamento"); }
+    } catch (err) { showError(err.response?.data?.message || "Erro ao criar pagamento"); }
     finally { setSaving(false); }
   };
 
   const handleAction = async (id, action) => {
-    try { await api.post(`/payments/${id}/${action}`); fetchData(); }
-    catch (err) { alert(err.response?.data?.message || "Erro"); }
+    try { await api.post(`/payments/${id}/${action}`); showSuccess("Operação realizada com sucesso!"); fetchData(); }
+    catch (err) { showError(err.response?.data?.message || "Erro"); }
   };
 
   const columns = [
