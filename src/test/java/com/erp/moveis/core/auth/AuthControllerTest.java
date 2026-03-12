@@ -132,11 +132,10 @@ class AuthControllerTest {
         request.setUsername("testadmin");
         request.setPassword("wrongpassword");
 
-        // Returns 500 because BadCredentialsException is not handled in GlobalExceptionHandler
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -147,11 +146,10 @@ class AuthControllerTest {
                 {"username":"","password":"admin123"}
                 """;
 
-        // Returns 500 because MethodArgumentNotValidException is caught by generic handler
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
     }
 
     @Test

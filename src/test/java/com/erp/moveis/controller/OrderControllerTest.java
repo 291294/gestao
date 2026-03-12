@@ -208,9 +208,8 @@ class OrderControllerTest {
     @Order(6)
     @DisplayName("GET /orders — should reject unauthenticated request")
     void shouldRejectUnauthenticatedRequest() throws Exception {
-        // Returns 403 because no AuthenticationEntryPoint is configured in SecurityConfig
         mockMvc.perform(get("/orders"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
