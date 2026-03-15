@@ -3,6 +3,8 @@ package com.erp.moveis.service;
 import com.erp.moveis.model.Client;
 import com.erp.moveis.repository.ClientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ public class ClientService {
     @Autowired
     private ClientRepository repository;
 
+    @Cacheable("clients")
     public List<Client> list() {
         return repository.findAll();
     }
@@ -28,14 +31,17 @@ public class ClientService {
         return repository.findById(id);
     }
 
+    @CacheEvict(value = "clients", allEntries = true)
     public Client save(Client client) {
         return repository.save(client);
     }
 
+    @CacheEvict(value = "clients", allEntries = true)
     public void delete(Long id) {
         repository.deleteById(id);
     }
 
+    @CacheEvict(value = "clients", allEntries = true)
     public Client update(Long id, Client clientDetails) {
         Optional<Client> client = repository.findById(id);
         if (client.isPresent()) {

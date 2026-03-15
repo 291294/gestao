@@ -3,12 +3,14 @@ package com.erp.moveis.controller;
 import com.erp.moveis.dto.PageResponse;
 import com.erp.moveis.dto.ProductRequest;
 import com.erp.moveis.dto.ProductResponse;
+import com.erp.moveis.core.export.ExportService;
 import com.erp.moveis.mapper.ProductMapper;
 import com.erp.moveis.model.Product;
 import com.erp.moveis.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -29,6 +32,7 @@ public class ProductController {
 
     private final ProductService service;
     private final ProductMapper mapper;
+    private final ExportService exportService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('product.list')")
@@ -85,5 +89,37 @@ public class ProductController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/export/pdf")
+    @PreAuthorize("hasAuthority('product.list')")
+    @Operation(summary = "Exportar produtos em PDF")
+    public void exportPdf(HttpServletResponse response) throws IOException {
+        List<Product> products = service.list();
+        List<String> headers = List.of("ID", "Nome", "Material", "Cor", "Preço Base (R$)");
+        List<List<String>> rows = products.stream().map(p -> List.of(
+                String.valueOf(p.getId()),
+                p.getName() != null ? p.getName() : "",
+                p.getMaterial() != null ? p.getMaterial() : "",
+                p.getColor() != null ? p.getColor() : "",
+                p.getBasePrice() != null ? String.format("%.2f", p.getBasePrice()) : "0.00"
+        )).toList();
+        exportService.exportToPdf(response, "Relatório de Produtos", headers, rows, "produtos");
+    }
+
+    @GetMapping("/export/excel")
+    @PreAuthorize("hasAuthority('product.list')")
+    @Operation(summary = "Exportar produtos em Excel")
+    public void exportExcel(HttpServletResponse response) throws IOException {
+        List<Product> products = service.list();
+        List<String> headers = List.of("ID", "Nome", "Material", "Cor", "Preço Base (R$)");
+        List<List<String>> rows = products.stream().map(p -> List.of(
+                String.valueOf(p.getId()),
+                p.getName() != null ? p.getName() : "",
+                p.getMaterial() != null ? p.getMaterial() : "",
+                p.getColor() != null ? p.getColor() : "",
+                p.getBasePrice() != null ? String.format("%.2f", p.getBasePrice()) : "0.00"
+        )).toList();
+        exportService.exportToExcel(response, "Produtos", headers, rows, "produtos");
     }
 }

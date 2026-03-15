@@ -1,19 +1,23 @@
 package com.erp.moveis.finance.controller;
 
+import com.erp.moveis.core.export.ExportService;
 import com.erp.moveis.finance.dto.PaymentRequest;
 import com.erp.moveis.finance.dto.PaymentResponse;
 import com.erp.moveis.finance.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @RestController
@@ -24,6 +28,7 @@ import java.util.List;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final ExportService exportService;
 
     @PostMapping
     @Operation(summary = "Criar pagamento")
@@ -90,5 +95,41 @@ public class PaymentController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
         return ResponseEntity.ok(paymentService.getByCompanyAndPeriod(companyId, start, end));
+    }
+
+    @GetMapping("/company/{companyId}/export/pdf")
+    @Operation(summary = "Exportar pagamentos em PDF")
+    public void exportPdf(@PathVariable Long companyId, HttpServletResponse response) throws IOException {
+        List<PaymentResponse> payments = paymentService.getByCompany(companyId);
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        List<String> headers = List.of("Número", "Valor (R$)", "Método", "Status", "Data Pagamento", "Data Confirmação");
+        List<List<String>> rows = payments.stream().map(p -> List.of(
+                p.getPaymentNumber() != null ? p.getPaymentNumber() : "",
+                p.getAmount() != null ? p.getAmount().toString() : "0.00",
+                p.getPaymentMethod() != null ? p.getPaymentMethod() : "",
+                p.getStatus() != null ? p.getStatus() : "",
+                p.getPaymentDate() != null ? p.getPaymentDate().format(fmt) : "",
+                p.getConfirmationDate() != null ? p.getConfirmationDate().format(fmt) : ""
+        )).toList();
+        exportService.exportToPdf(response, "Relatório de Pagamentos", headers, rows, "pagamentos");
+    }
+
+    @GetMapping("/company/{companyId}/export/excel")
+    @Operation(summary = "Exportar pagamentos em Excel")
+    public void exportExcel(@PathVariable Long companyId, HttpServletResponse response) throws IOException {
+        List<PaymentResponse> payments = paymentService.getByCompany(companyId);
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        List<String> headers = List.of("Número", "Valor (R$)", "Método", "Status", "Data Pagamento", "Data Confirmação", "Transação", "Notas");
+        List<List<String>> rows = payments.stream().map(p -> List.of(
+                p.getPaymentNumber() != null ? p.getPaymentNumber() : "",
+                p.getAmount() != null ? p.getAmount().toString() : "0.00",
+                p.getPaymentMethod() != null ? p.getPaymentMethod() : "",
+                p.getStatus() != null ? p.getStatus() : "",
+                p.getPaymentDate() != null ? p.getPaymentDate().format(fmt) : "",
+                p.getConfirmationDate() != null ? p.getConfirmationDate().format(fmt) : "",
+                p.getTransactionId() != null ? p.getTransactionId() : "",
+                p.getNotes() != null ? p.getNotes() : ""
+        )).toList();
+        exportService.exportToExcel(response, "Pagamentos", headers, rows, "pagamentos");
     }
 }

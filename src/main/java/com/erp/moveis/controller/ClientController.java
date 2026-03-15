@@ -3,12 +3,14 @@ package com.erp.moveis.controller;
 import com.erp.moveis.dto.ClientRequest;
 import com.erp.moveis.dto.ClientResponse;
 import com.erp.moveis.dto.PageResponse;
+import com.erp.moveis.core.export.ExportService;
 import com.erp.moveis.mapper.ClientMapper;
 import com.erp.moveis.model.Client;
 import com.erp.moveis.service.ClientService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -29,6 +32,7 @@ public class ClientController {
 
     private final ClientService service;
     private final ClientMapper mapper;
+    private final ExportService exportService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('client.list')")
@@ -85,5 +89,38 @@ public class ClientController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/export/pdf")
+    @PreAuthorize("hasAuthority('client.list')")
+    @Operation(summary = "Exportar clientes em PDF")
+    public void exportPdf(HttpServletResponse response) throws IOException {
+        List<Client> clients = service.list();
+        List<String> headers = List.of("ID", "Nome", "Telefone", "Email", "Profissão");
+        List<List<String>> rows = clients.stream().map(c -> List.of(
+                String.valueOf(c.getId()),
+                c.getName() != null ? c.getName() : "",
+                c.getPhone() != null ? c.getPhone() : "",
+                c.getEmail() != null ? c.getEmail() : "",
+                c.getProfession() != null ? c.getProfession() : ""
+        )).toList();
+        exportService.exportToPdf(response, "Relatório de Clientes", headers, rows, "clientes");
+    }
+
+    @GetMapping("/export/excel")
+    @PreAuthorize("hasAuthority('client.list')")
+    @Operation(summary = "Exportar clientes em Excel")
+    public void exportExcel(HttpServletResponse response) throws IOException {
+        List<Client> clients = service.list();
+        List<String> headers = List.of("ID", "Nome", "Telefone", "Email", "Profissão", "Preferências");
+        List<List<String>> rows = clients.stream().map(c -> List.of(
+                String.valueOf(c.getId()),
+                c.getName() != null ? c.getName() : "",
+                c.getPhone() != null ? c.getPhone() : "",
+                c.getEmail() != null ? c.getEmail() : "",
+                c.getProfession() != null ? c.getProfession() : "",
+                c.getPreferences() != null ? c.getPreferences() : ""
+        )).toList();
+        exportService.exportToExcel(response, "Clientes", headers, rows, "clientes");
     }
 }
