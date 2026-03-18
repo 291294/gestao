@@ -1,18 +1,23 @@
 package com.erp.moveis.inventory.entity;
 
+import com.erp.moveis.core.tenant.TenantAware;
+import com.erp.moveis.core.tenant.TenantEntityListener;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "inventory_movements")
+@EntityListeners(TenantEntityListener.class)
+@Filter(name = "tenantFilter", condition = "company_id = :companyId")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class InventoryMovement {
+public class InventoryMovement implements TenantAware {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

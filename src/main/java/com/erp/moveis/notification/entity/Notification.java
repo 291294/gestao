@@ -1,9 +1,12 @@
 package com.erp.moveis.notification.entity;
 
+import com.erp.moveis.core.tenant.TenantAware;
+import com.erp.moveis.core.tenant.TenantEntityListener;
 import com.erp.moveis.notification.type.NotificationType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Filter;
 
 import java.time.LocalDateTime;
 
@@ -11,7 +14,9 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Table(name = "notifications")
-public class Notification {
+@EntityListeners(TenantEntityListener.class)
+@Filter(name = "tenantFilter", condition = "company_id = :companyId")
+public class Notification implements TenantAware {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

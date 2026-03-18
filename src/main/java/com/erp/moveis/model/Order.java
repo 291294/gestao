@@ -1,8 +1,11 @@
 package com.erp.moveis.model;
 
+import com.erp.moveis.core.tenant.TenantAware;
+import com.erp.moveis.core.tenant.TenantEntityListener;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -10,7 +13,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "orders")
-public class Order {
+@EntityListeners(TenantEntityListener.class)
+@Filter(name = "tenantFilter", condition = "company_id = :companyId")
+public class Order implements TenantAware {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

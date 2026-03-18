@@ -1,7 +1,10 @@
 package com.erp.moveis.delivery.entity;
 
+import com.erp.moveis.core.tenant.TenantAware;
+import com.erp.moveis.core.tenant.TenantEntityListener;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -10,12 +13,14 @@ import java.util.List;
 
 @Entity
 @Table(name = "deliveries")
+@EntityListeners(TenantEntityListener.class)
+@Filter(name = "tenantFilter", condition = "company_id = :companyId")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Delivery {
+public class Delivery implements TenantAware {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

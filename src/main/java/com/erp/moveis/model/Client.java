@@ -10,12 +10,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Filter;
 
 import java.io.Serializable;
 
 @Entity
 @Table(name = "clients")
 @EntityListeners(TenantEntityListener.class)
+@Filter(name = "tenantFilter", condition = "company_id = :companyId")
 public class Client implements Serializable, TenantAware {
 
     @Id

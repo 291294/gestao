@@ -3,10 +3,12 @@ package com.erp.moveis.model;
 import com.erp.moveis.core.tenant.TenantAware;
 import com.erp.moveis.core.tenant.TenantEntityListener;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 
 @Entity
 @Table(name = "projects")
 @EntityListeners(TenantEntityListener.class)
+@Filter(name = "tenantFilter", condition = "company_id = :companyId")
 public class Project implements TenantAware {
 
     @Id

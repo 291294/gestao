@@ -1,5 +1,7 @@
 package com.erp.moveis.core.tenant;
 
+import org.slf4j.MDC;
+
 /**
  * ThreadLocal holder for the current tenant (company) ID.
  * Set by JwtAuthenticationFilter on each authenticated request
@@ -8,12 +10,16 @@ package com.erp.moveis.core.tenant;
 public final class TenantContext {
 
     private static final ThreadLocal<Long> CURRENT_TENANT = new ThreadLocal<>();
+    private static final String MDC_TENANT_KEY = "tenantId";
 
     private TenantContext() {
     }
 
     public static void setTenantId(Long tenantId) {
         CURRENT_TENANT.set(tenantId);
+        if (tenantId != null) {
+            MDC.put(MDC_TENANT_KEY, tenantId.toString());
+        }
     }
 
     public static Long getTenantId() {
@@ -30,5 +36,6 @@ public final class TenantContext {
 
     public static void clear() {
         CURRENT_TENANT.remove();
+        MDC.remove(MDC_TENANT_KEY);
     }
 }

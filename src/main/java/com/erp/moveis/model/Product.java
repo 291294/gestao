@@ -3,11 +3,13 @@ package com.erp.moveis.model;
 import com.erp.moveis.core.tenant.TenantAware;
 import com.erp.moveis.core.tenant.TenantEntityListener;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import java.io.Serializable;
 
 @Entity
 @Table(name = "products")
 @EntityListeners(TenantEntityListener.class)
+@Filter(name = "tenantFilter", condition = "company_id = :companyId")
 public class Product implements Serializable, TenantAware {
 
     @Id

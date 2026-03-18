@@ -15,12 +15,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Set;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+
+    private static final Set<String> TENANT_EXEMPT_PREFIXES = Set.of(
+            "/auth/", "/swagger-ui", "/v3/api-docs", "/actuator", "/h2-console"
+    );
 
     public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
         this.jwtService = jwtService;
@@ -64,6 +69,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     Long companyId = jwtService.extractCompanyId(jwt);
                     if (companyId != null) {
                         TenantContext.setTenantId(companyId);
+                    } else if (!isTenantExempt(request)) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\":\"Tenant not associated with user\"}");
+                        return;
                     }
                 }
             }
@@ -71,5 +81,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } finally {
             TenantContext.clear();
         }
+    }
+
+    private boolean isTenantExempt(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return TENANT_EXEMPT_PREFIXES.stream().anyMatch(path::startsWith);
     }
 }

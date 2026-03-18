@@ -1,17 +1,22 @@
 package com.erp.moveis.manufacturing.entity;
 
+import com.erp.moveis.core.tenant.TenantAware;
+import com.erp.moveis.core.tenant.TenantEntityListener;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Filter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "production_orders")
+@EntityListeners(TenantEntityListener.class)
+@Filter(name = "tenantFilter", condition = "company_id = :companyId")
 @Getter
 @Setter
-public class ProductionOrder {
+public class ProductionOrder implements TenantAware {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
