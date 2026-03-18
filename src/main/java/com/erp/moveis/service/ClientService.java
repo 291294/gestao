@@ -1,5 +1,6 @@
 package com.erp.moveis.service;
 
+import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.model.Client;
 import com.erp.moveis.repository.ClientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,32 +19,34 @@ public class ClientService {
     @Autowired
     private ClientRepository repository;
 
-    @Cacheable("clients")
+    @Cacheable(value = "clients", key = "T(com.erp.moveis.core.tenant.TenantContext).getTenantId()")
     public List<Client> list() {
-        return repository.findAll();
+        return repository.findByCompanyId(TenantContext.requireTenantId());
     }
 
     public Page<Client> listPaged(Pageable pageable) {
-        return repository.findAll(pageable);
+        return repository.findByCompanyId(TenantContext.requireTenantId(), pageable);
     }
 
     public Optional<Client> findById(Long id) {
-        return repository.findById(id);
+        return repository.findByIdAndCompanyId(id, TenantContext.requireTenantId());
     }
 
     @CacheEvict(value = "clients", allEntries = true)
     public Client save(Client client) {
+        client.setCompanyId(TenantContext.requireTenantId());
         return repository.save(client);
     }
 
     @CacheEvict(value = "clients", allEntries = true)
     public void delete(Long id) {
-        repository.deleteById(id);
+        repository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
+                .ifPresent(c -> repository.deleteById(c.getId()));
     }
 
     @CacheEvict(value = "clients", allEntries = true)
     public Client update(Long id, Client clientDetails) {
-        Optional<Client> client = repository.findById(id);
+        Optional<Client> client = repository.findByIdAndCompanyId(id, TenantContext.requireTenantId());
         if (client.isPresent()) {
             Client existingClient = client.get();
             if (clientDetails.getName() != null) {

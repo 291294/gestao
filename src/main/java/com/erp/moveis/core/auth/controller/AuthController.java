@@ -1,6 +1,7 @@
 package com.erp.moveis.core.auth.controller;
 
 import com.erp.moveis.core.auth.dto.LoginRequest;
+import com.erp.moveis.core.auth.dto.RegisterCompanyRequest;
 import com.erp.moveis.core.auth.dto.RegisterRequest;
 import com.erp.moveis.core.auth.dto.TokenResponse;
 import com.erp.moveis.core.auth.service.AuthService;
@@ -27,6 +28,12 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<TokenResponse> register(@Valid @RequestBody RegisterRequest request) {
         TokenResponse response = authService.register(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/register-company")
+    public ResponseEntity<TokenResponse> registerCompany(@Valid @RequestBody RegisterCompanyRequest request) {
+        TokenResponse response = authService.registerCompany(request);
         return ResponseEntity.ok(response);
     }
 

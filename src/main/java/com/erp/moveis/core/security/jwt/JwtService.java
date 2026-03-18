@@ -1,5 +1,6 @@
 package com.erp.moveis.core.security.jwt;
 
+import com.erp.moveis.core.user.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -30,13 +31,21 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public Long extractCompanyId(String token) {
+        return extractClaim(token, claims -> claims.get("companyId", Long.class));
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        Map<String, Object> extraClaims = new HashMap<>();
+        if (userDetails instanceof User user && user.getCompany() != null) {
+            extraClaims.put("companyId", user.getCompany().getId());
+        }
+        return generateToken(extraClaims, userDetails);
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
@@ -44,7 +53,11 @@ public class JwtService {
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
-        return buildToken(new HashMap<>(), userDetails, refreshExpiration);
+        Map<String, Object> extraClaims = new HashMap<>();
+        if (userDetails instanceof User user && user.getCompany() != null) {
+            extraClaims.put("companyId", user.getCompany().getId());
+        }
+        return buildToken(extraClaims, userDetails, refreshExpiration);
     }
 
     private String buildToken(

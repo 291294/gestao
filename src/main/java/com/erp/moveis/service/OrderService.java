@@ -1,6 +1,7 @@
 package com.erp.moveis.service;
 
 import com.erp.moveis.core.exception.ResourceNotFoundException;
+import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.inventory.service.InventoryService;
 import com.erp.moveis.model.Order;
 import com.erp.moveis.model.OrderItem;
@@ -26,23 +27,24 @@ public class OrderService {
     private static final Long DEFAULT_WAREHOUSE_ID = 1L;
 
     public List<Order> list() {
-        return repository.findAll();
+        return repository.findByCompanyId(TenantContext.requireTenantId());
     }
 
     public Page<Order> listPaged(Pageable pageable) {
-        return repository.findAll(pageable);
+        return repository.findByCompanyId(TenantContext.requireTenantId(), pageable);
     }
 
     public Optional<Order> findById(Long id) {
-        return repository.findById(id);
+        return repository.findByIdAndCompanyId(id, TenantContext.requireTenantId());
     }
 
     public List<Order> findByClientId(Long clientId) {
-        return repository.findByClientId(clientId);
+        return repository.findByCompanyIdAndClientId(TenantContext.requireTenantId(), clientId);
     }
 
     @Transactional
     public Order save(Order order) {
+        order.setCompanyId(TenantContext.requireTenantId());
         // Calcular subtotais dos itens
         if (order.getItems() != null) {
             for (OrderItem item : order.getItems()) {
@@ -73,12 +75,13 @@ public class OrderService {
     }
 
     public void delete(Long id) {
-        repository.deleteById(id);
+        repository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
+                .ifPresent(o -> repository.deleteById(o.getId()));
     }
 
     @Transactional
     public Order update(Long id, Order orderDetails) {
-        Order existingOrder = repository.findById(id)
+        Order existingOrder = repository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
 
         if (orderDetails.getTotalValue() != null) {
@@ -92,7 +95,7 @@ public class OrderService {
 
     @Transactional
     public Order cancel(Long id) {
-        Order order = repository.findById(id)
+        Order order = repository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
 
         // Liberar reservas de estoque

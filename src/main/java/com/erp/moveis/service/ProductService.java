@@ -1,5 +1,6 @@
 package com.erp.moveis.service;
 
+import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.model.Product;
 import com.erp.moveis.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,32 +19,34 @@ public class ProductService {
     @Autowired
     private ProductRepository repository;
 
-    @Cacheable("products")
+    @Cacheable(value = "products", key = "T(com.erp.moveis.core.tenant.TenantContext).getTenantId()")
     public List<Product> list() {
-        return repository.findAll();
+        return repository.findByCompanyId(TenantContext.requireTenantId());
     }
 
     public Page<Product> listPaged(Pageable pageable) {
-        return repository.findAll(pageable);
+        return repository.findByCompanyId(TenantContext.requireTenantId(), pageable);
     }
 
     public Optional<Product> findById(Long id) {
-        return repository.findById(id);
+        return repository.findByIdAndCompanyId(id, TenantContext.requireTenantId());
     }
 
     @CacheEvict(value = "products", allEntries = true)
     public Product save(Product product) {
+        product.setCompanyId(TenantContext.requireTenantId());
         return repository.save(product);
     }
 
     @CacheEvict(value = "products", allEntries = true)
     public void delete(Long id) {
-        repository.deleteById(id);
+        repository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
+                .ifPresent(p -> repository.deleteById(p.getId()));
     }
 
     @CacheEvict(value = "products", allEntries = true)
     public Product update(Long id, Product productDetails) {
-        Optional<Product> product = repository.findById(id);
+        Optional<Product> product = repository.findByIdAndCompanyId(id, TenantContext.requireTenantId());
         if (product.isPresent()) {
             Product existingProduct = product.get();
             if (productDetails.getName() != null) {

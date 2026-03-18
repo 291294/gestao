@@ -1,7 +1,10 @@
 package com.erp.moveis.model;
 
+import com.erp.moveis.core.tenant.TenantAware;
+import com.erp.moveis.core.tenant.TenantEntityListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -12,11 +15,15 @@ import java.io.Serializable;
 
 @Entity
 @Table(name = "clients")
-public class Client implements Serializable {
+@EntityListeners(TenantEntityListener.class)
+public class Client implements Serializable, TenantAware {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
 
     @Column(nullable = false)
     private String name;
@@ -102,5 +109,13 @@ public class Client implements Serializable {
 
     public void setCreatedAt(Long createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Long getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(Long companyId) {
+        this.companyId = companyId;
     }
 }

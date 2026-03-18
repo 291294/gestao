@@ -1,10 +1,12 @@
 package com.erp.moveis.service;
 
 import com.erp.moveis.core.exception.ResourceNotFoundException;
+import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.inventory.service.InventoryService;
 import com.erp.moveis.model.Order;
 import com.erp.moveis.model.OrderItem;
 import com.erp.moveis.repository.OrderRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +39,8 @@ class OrderServiceTest {
 
     @BeforeEach
     void setUp() {
+        TenantContext.setTenantId(1L);
+
         item = new OrderItem();
         item.setProductId(10L);
         item.setQuantity(new BigDecimal("3"));
@@ -50,29 +54,34 @@ class OrderServiceTest {
         order.setItems(new ArrayList<>(List.of(item)));
     }
 
-    @Test @DisplayName("list — should return all orders")
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
+    }
+
+    @Test @DisplayName("list — should return all orders for tenant")
     void shouldListAll() {
-        when(repository.findAll()).thenReturn(List.of(order));
+        when(repository.findByCompanyId(1L)).thenReturn(List.of(order));
         assertThat(service.list()).hasSize(1);
     }
 
-    @Test @DisplayName("listPaged — should return paged orders")
+    @Test @DisplayName("listPaged — should return paged orders for tenant")
     void shouldListPaged() {
         PageRequest pageable = PageRequest.of(0, 10);
-        when(repository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(order)));
+        when(repository.findByCompanyId(1L, pageable)).thenReturn(new PageImpl<>(List.of(order)));
         Page<Order> result = service.listPaged(pageable);
         assertThat(result.getContent()).hasSize(1);
     }
 
-    @Test @DisplayName("findById — should return order")
+    @Test @DisplayName("findById — should return order for tenant")
     void shouldFindById() {
-        when(repository.findById(1L)).thenReturn(Optional.of(order));
+        when(repository.findByIdAndCompanyId(1L, 1L)).thenReturn(Optional.of(order));
         assertThat(service.findById(1L)).isPresent();
     }
 
-    @Test @DisplayName("findByClientId — should return client orders")
+    @Test @DisplayName("findByClientId — should return client orders for tenant")
     void shouldFindByClientId() {
-        when(repository.findByClientId(5L)).thenReturn(List.of(order));
+        when(repository.findByCompanyIdAndClientId(1L, 5L)).thenReturn(List.of(order));
         assertThat(service.findByClientId(5L)).hasSize(1);
     }
 
@@ -89,15 +98,16 @@ class OrderServiceTest {
         verify(inventoryService).reserveWarehouseStock(eq(1L), eq(10L), eq(1L), eq(new BigDecimal("3")), eq(1L));
     }
 
-    @Test @DisplayName("delete — should call deleteById")
+    @Test @DisplayName("delete — should delete order for tenant")
     void shouldDelete() {
+        when(repository.findByIdAndCompanyId(1L, 1L)).thenReturn(Optional.of(order));
         service.delete(1L);
         verify(repository).deleteById(1L);
     }
 
     @Test @DisplayName("update — should update order fields")
     void shouldUpdate() {
-        when(repository.findById(1L)).thenReturn(Optional.of(order));
+        when(repository.findByIdAndCompanyId(1L, 1L)).thenReturn(Optional.of(order));
         when(repository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Order updates = new Order();
@@ -111,7 +121,7 @@ class OrderServiceTest {
 
     @Test @DisplayName("cancel — should release stock and set CANCELLED")
     void shouldCancelAndReleaseStock() {
-        when(repository.findById(1L)).thenReturn(Optional.of(order));
+        when(repository.findByIdAndCompanyId(1L, 1L)).thenReturn(Optional.of(order));
         when(repository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Order result = service.cancel(1L);

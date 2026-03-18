@@ -1,6 +1,7 @@
 package com.erp.moveis.core.auth.service;
 
 import com.erp.moveis.core.auth.dto.LoginRequest;
+import com.erp.moveis.core.auth.dto.RegisterCompanyRequest;
 import com.erp.moveis.core.auth.dto.RegisterRequest;
 import com.erp.moveis.core.auth.dto.TokenResponse;
 import com.erp.moveis.core.company.entity.Company;
@@ -109,6 +110,41 @@ public class AuthService {
         String newAccessToken = jwtService.generateToken(user);
 
         return buildResponse(user, newAccessToken, refreshToken);
+    }
+
+    @Transactional
+    public TokenResponse registerCompany(RegisterCompanyRequest request) {
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+
+        // Create the company
+        Company company = new Company(request.getCompanyName(), request.getCnpj());
+        company = companyRepository.save(company);
+
+        // Create admin user for the company
+        Role adminRole = roleRepository.findByName("ADMIN")
+                .orElseThrow(() -> new IllegalStateException("ADMIN role not found"));
+
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setFullName(request.getFullName());
+        user.setCompany(company);
+        user.setActive(true);
+        user.addRole(adminRole);
+
+        user = userRepository.save(user);
+
+        String accessToken = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        return buildResponse(user, accessToken, refreshToken);
     }
 
     private TokenResponse buildResponse(User user, String accessToken, String refreshToken) {
