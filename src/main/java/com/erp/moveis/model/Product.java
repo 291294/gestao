@@ -5,6 +5,7 @@ import com.erp.moveis.core.tenant.TenantEntityListener;
 import jakarta.persistence.*;
 import org.hibernate.annotations.Filter;
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "products")
@@ -26,8 +27,16 @@ public class Product implements Serializable, TenantAware {
 
     private String color;
 
-    @Column(name = "base_price")
-    private Double basePrice;
+    private String description;
+
+    private String dimensions;
+
+    private Double weight;
+
+    private String imageUrl;
+
+    @Column(name = "base_price", precision = 15, scale = 2)
+    private BigDecimal basePrice;
 
     @Column(name = "created_at")
     private Long createdAt;
@@ -35,7 +44,7 @@ public class Product implements Serializable, TenantAware {
     public Product() {
     }
 
-    public Product(String name, String material, String color, Double basePrice) {
+    public Product(String name, String material, String color, BigDecimal basePrice) {
         this.name = name;
         this.material = material;
         this.color = color;
@@ -79,11 +88,43 @@ public class Product implements Serializable, TenantAware {
         this.color = color;
     }
 
-    public Double getBasePrice() {
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getDimensions() {
+        return dimensions;
+    }
+
+    public void setDimensions(String dimensions) {
+        this.dimensions = dimensions;
+    }
+
+    public Double getWeight() {
+        return weight;
+    }
+
+    public void setWeight(Double weight) {
+        this.weight = weight;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public BigDecimal getBasePrice() {
         return basePrice;
     }
 
-    public void setBasePrice(Double basePrice) {
+    public void setBasePrice(BigDecimal basePrice) {
         this.basePrice = basePrice;
     }
 

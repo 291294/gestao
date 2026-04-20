@@ -336,7 +336,7 @@ public class PromobImportService {
                 .findFirst()
                 .orElseGet(() -> {
                     Product p = new Product(name.trim(), null, null,
-                            price != null ? price.doubleValue() : 0.0);
+                            price != null ? price : BigDecimal.ZERO);
                     return productRepository.save(p);
                 });
     }

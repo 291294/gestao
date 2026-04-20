@@ -15,7 +15,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/projects")
-@CrossOrigin(origins = "*")
 @Tag(name = "Projetos", description = "Gestão de projetos")
 @SecurityRequirement(name = "bearerAuth")
 public class ProjectController {

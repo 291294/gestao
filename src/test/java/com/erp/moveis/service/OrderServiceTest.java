@@ -50,7 +50,7 @@ class OrderServiceTest {
         order.setId(1L);
         order.setCompanyId(1L);
         order.setStatus("PENDING");
-        order.setTotalValue(1500.0);
+        order.setTotalValue(new BigDecimal("1500"));
         order.setItems(new ArrayList<>(List.of(item)));
     }
 
@@ -112,11 +112,11 @@ class OrderServiceTest {
 
         Order updates = new Order();
         updates.setStatus("CONFIRMED");
-        updates.setTotalValue(2000.0);
+        updates.setTotalValue(new BigDecimal("2000"));
 
         Order result = service.update(1L, updates);
         assertThat(result.getStatus()).isEqualTo("CONFIRMED");
-        assertThat(result.getTotalValue()).isEqualTo(2000.0);
+        assertThat(result.getTotalValue()).isEqualTo(new BigDecimal("2000"));
     }
 
     @Test @DisplayName("cancel — should release stock and set CANCELLED")

@@ -1,13 +1,16 @@
 package com.erp.moveis.sales.controller;
 
+import com.erp.moveis.core.export.ExportService;
 import com.erp.moveis.sales.dto.QuoteItemRequest;
 import com.erp.moveis.sales.dto.QuoteRequest;
 import com.erp.moveis.sales.dto.QuoteResponse;
+import com.erp.moveis.sales.entity.Quote;
 import com.erp.moveis.sales.entity.QuoteStatus;
 import com.erp.moveis.sales.service.QuoteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -27,6 +31,7 @@ import java.util.List;
 public class QuoteController {
 
     private final QuoteService quoteService;
+    private final ExportService exportService;
 
     // ── CRUD ───────────────────────────────────────────────────
 
@@ -124,5 +129,23 @@ public class QuoteController {
     @Operation(summary = "Recalcular totais do orçamento")
     public ResponseEntity<QuoteResponse> calculate(@PathVariable Long id) {
         return ResponseEntity.ok(quoteService.calculateTotals(id));
+    }
+
+    // ── Exportação ──────────────────────────────────────────────
+
+    @GetMapping("/{id}/export/pdf")
+    @Operation(summary = "Exportar orçamento em PDF")
+    public void exportPdf(@PathVariable Long id, HttpServletResponse response) throws IOException {
+        QuoteResponse quote = quoteService.getQuote(id);
+        List<String> headers = List.of("Produto ID", "Qtd", "Preço Unit.", "Desconto", "Subtotal");
+        List<List<String>> rows = quote.getItems() != null ? quote.getItems().stream().map(item -> List.of(
+                String.valueOf(item.getProductId()),
+                String.valueOf(item.getQuantity()),
+                "R$ " + (item.getUnitPrice() != null ? item.getUnitPrice().toPlainString() : "0"),
+                item.getDiscountAmount() != null ? "R$ " + item.getDiscountAmount().toPlainString() : "-",
+                "R$ " + (item.getSubtotal() != null ? item.getSubtotal().toPlainString() : "0")
+        )).toList() : List.of();
+        String title = "Orçamento " + quote.getQuoteNumber() + " - Total: R$ " + (quote.getFinalAmount() != null ? quote.getFinalAmount().toPlainString() : "0");
+        exportService.exportToPdf(response, title, headers, rows, "orcamento_" + quote.getQuoteNumber());
     }
 }

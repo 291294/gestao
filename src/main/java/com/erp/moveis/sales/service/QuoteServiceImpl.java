@@ -193,7 +193,7 @@ public class QuoteServiceImpl implements QuoteService {
 
         Order order = new Order();
         order.setClient(client);
-        order.setTotalValue(quote.getFinalAmount().doubleValue());
+        order.setTotalValue(quote.getFinalAmount());
         order.setStatus("CONFIRMED");
         Order savedOrder = orderRepository.save(order);
 

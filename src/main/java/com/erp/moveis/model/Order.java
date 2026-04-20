@@ -24,8 +24,8 @@ public class Order implements TenantAware {
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
-    @Column(name = "total_value")
-    private Double totalValue;
+    @Column(name = "total_value", precision = 15, scale = 2)
+    private BigDecimal totalValue;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id")
@@ -46,7 +46,7 @@ public class Order implements TenantAware {
     public Order() {
     }
 
-    public Order(Long companyId, Double totalValue, Client client, String status) {
+    public Order(Long companyId, BigDecimal totalValue, Client client, String status) {
         this.companyId = companyId;
         this.totalValue = totalValue;
         this.client = client;
@@ -72,11 +72,11 @@ public class Order implements TenantAware {
         this.id = id;
     }
 
-    public Double getTotalValue() {
+    public BigDecimal getTotalValue() {
         return totalValue;
     }
 
-    public void setTotalValue(Double totalValue) {
+    public void setTotalValue(BigDecimal totalValue) {
         this.totalValue = totalValue;
     }
 
@@ -150,7 +150,7 @@ public class Order implements TenantAware {
     public void recalculateTotal() {
         this.totalValue = items.stream()
                 .filter(i -> i.getSubtotal() != null)
-                .mapToDouble(i -> i.getSubtotal().doubleValue())
-                .sum();
+                .map(OrderItem::getSubtotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

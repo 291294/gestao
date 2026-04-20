@@ -1,5 +1,6 @@
 package com.erp.moveis.controller;
 
+import com.erp.moveis.core.export.ExportService;
 import com.erp.moveis.dto.OrderRequest;
 import com.erp.moveis.dto.OrderResponse;
 import com.erp.moveis.dto.PageResponse;
@@ -10,6 +11,7 @@ import com.erp.moveis.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -18,11 +20,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
 @RequestMapping("/orders")
-@CrossOrigin(origins = "*")
 @Tag(name = "Pedidos", description = "Gestão de pedidos")
 @SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
@@ -30,6 +32,7 @@ public class OrderController {
 
     private final OrderService service;
     private final OrderMapper mapper;
+    private final ExportService exportService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('order.list')")
@@ -103,5 +106,22 @@ public class OrderController {
     @Operation(summary = "Cancelar pedido e liberar estoque reservado")
     public ResponseEntity<OrderResponse> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(mapper.toResponse(service.cancel(id)));
+    }
+
+    @GetMapping("/{id}/export/pdf")
+    @PreAuthorize("hasAuthority('order.view')")
+    @Operation(summary = "Exportar pedido em PDF")
+    public void exportPdf(@PathVariable Long id, HttpServletResponse response) throws IOException {
+        Order order = service.findById(id).orElseThrow(() -> new RuntimeException("Pedido não encontrado"));
+        List<String> headers = List.of("Produto ID", "Qtd", "Preço Unit.", "Subtotal", "Observações");
+        List<List<String>> rows = order.getItems().stream().map(item -> List.of(
+                String.valueOf(item.getProductId()),
+                item.getQuantity() != null ? item.getQuantity().toPlainString() : "",
+                item.getUnitPrice() != null ? "R$ " + item.getUnitPrice().toPlainString() : "",
+                item.getSubtotal() != null ? "R$ " + item.getSubtotal().toPlainString() : "",
+                item.getNotes() != null ? item.getNotes() : ""
+        )).toList();
+        String title = "Pedido #" + order.getId() + " - Total: R$ " + (order.getTotalValue() != null ? order.getTotalValue().toPlainString() : "0");
+        exportService.exportToPdf(response, title, headers, rows, "pedido_" + order.getId());
     }
 }

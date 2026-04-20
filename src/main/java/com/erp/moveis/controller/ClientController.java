@@ -24,7 +24,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/clients")
-@CrossOrigin(origins = "*")
 @Tag(name = "Clientes", description = "Gestão de clientes")
 @SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor

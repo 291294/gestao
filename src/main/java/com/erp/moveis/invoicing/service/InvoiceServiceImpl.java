@@ -192,7 +192,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setOrderId(orderId);
         invoice.setInvoiceNumber(generateInvoiceNumber());
         invoice.setStatus(InvoiceStatus.DRAFT);
-        invoice.setSubtotal(BigDecimal.valueOf(order.getTotalValue() != null ? order.getTotalValue() : 0));
+        invoice.setSubtotal(order.getTotalValue() != null ? order.getTotalValue() : BigDecimal.ZERO);
         invoice.setTotalAmount(invoice.getSubtotal());
         invoice.setDueDate(LocalDate.now().plusDays(30));
 

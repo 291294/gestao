@@ -177,7 +177,7 @@ class InvoiceServiceImplTest {
     void shouldCreateFromOrder() {
         Order order = new Order();
         order.setId(10L);
-        order.setTotalValue(5000.0);
+        order.setTotalValue(new BigDecimal("5000"));
         when(invoiceRepository.findByOrderId(10L)).thenReturn(Optional.empty());
         when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
         when(invoiceRepository.save(any())).thenAnswer(inv -> {
