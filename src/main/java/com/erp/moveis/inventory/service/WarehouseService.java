@@ -8,6 +8,8 @@ public interface WarehouseService {
 
     Warehouse create(Warehouse warehouse);
 
+    Warehouse update(Long id, Warehouse warehouse);
+
     List<Warehouse> findByCompany(Long companyId);
 
     Warehouse findById(Long id);

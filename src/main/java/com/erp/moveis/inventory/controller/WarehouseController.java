@@ -29,6 +29,11 @@ public class WarehouseController {
         return service.findById(id);
     }
 
+    @PutMapping("/{id}")
+    public Warehouse update(@PathVariable Long id, @RequestBody Warehouse warehouse) {
+        return service.update(id, warehouse);
+    }
+
     @DeleteMapping("/{id}")
     public void deactivate(@PathVariable Long id) {
         service.deactivate(id);

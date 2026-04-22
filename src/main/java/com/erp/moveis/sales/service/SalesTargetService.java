@@ -18,6 +18,8 @@ public interface SalesTargetService {
 
     List<SalesTargetResponse> getTargetsByCompany(Long companyId, TargetType type);
 
+    List<SalesTargetResponse> getTargetsByCompany(Long companyId);
+
     List<SalesTargetResponse> getActiveTargetsForSeller(Long sellerId);
 
     SalesTargetResponse addAchievedAmount(Long targetId, BigDecimal saleAmount);

@@ -34,6 +34,14 @@ public class WarehouseServiceImpl implements WarehouseService {
     }
 
     @Override
+    public Warehouse update(Long id, Warehouse request) {
+        Warehouse warehouse = findById(id);
+        warehouse.setName(request.getName());
+        warehouse.setLocation(request.getLocation());
+        return repository.save(warehouse);
+    }
+
+    @Override
     public void deactivate(Long id) {
         Warehouse warehouse = findById(id);
         warehouse.setActive(false);

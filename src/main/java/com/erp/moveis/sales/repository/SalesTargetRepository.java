@@ -18,6 +18,8 @@ public interface SalesTargetRepository extends JpaRepository<SalesTarget, Long> 
 
     List<SalesTarget> findByCompanyIdAndTargetType(Long companyId, TargetType targetType);
 
+    List<SalesTarget> findByCompanyId(Long companyId);
+
     @Query("SELECT st FROM SalesTarget st WHERE st.sellerId = :sellerId AND :date BETWEEN st.periodStart AND st.periodEnd AND st.status = 'ACTIVE'")
     List<SalesTarget> findActiveTargetsForSellerAtDate(
             @Param("sellerId") Long sellerId,

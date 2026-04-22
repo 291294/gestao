@@ -55,11 +55,14 @@ public class SalesTargetController {
     }
 
     @GetMapping("/company/{companyId}")
-    @Operation(summary = "Listar metas por empresa e tipo")
+    @Operation(summary = "Listar metas por empresa e tipo (tipo opcional)")
     public ResponseEntity<List<SalesTargetResponse>> findByCompany(
             @PathVariable Long companyId,
-            @RequestParam TargetType type) {
-        return ResponseEntity.ok(salesTargetService.getTargetsByCompany(companyId, type));
+            @RequestParam(required = false) TargetType type) {
+        if (type != null) {
+            return ResponseEntity.ok(salesTargetService.getTargetsByCompany(companyId, type));
+        }
+        return ResponseEntity.ok(salesTargetService.getTargetsByCompany(companyId));
     }
 
     // ── Progresso ──────────────────────────────────────────────

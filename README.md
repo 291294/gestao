@@ -322,7 +322,7 @@ docker-compose logs -f
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8080/api
 - **Swagger**: http://localhost:8080/swagger-ui/index.html
-- **PostgreSQL**: localhost:5432
+- **PostgreSQL**: vamos 
 
 ### Comandos Docker Úteis
 

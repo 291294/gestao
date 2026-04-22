@@ -62,6 +62,14 @@ public class SalesTargetServiceImpl implements SalesTargetService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<SalesTargetResponse> getTargetsByCompany(Long companyId) {
+        return salesTargetRepository.findByCompanyId(companyId).stream()
+                .map(SalesTargetMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<SalesTargetResponse> getActiveTargetsForSeller(Long sellerId) {
         return salesTargetRepository.findActiveTargetsForSellerAtDate(sellerId, LocalDate.now()).stream()
                 .map(SalesTargetMapper::toResponse)
