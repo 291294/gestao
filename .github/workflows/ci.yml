@@ -1,7 +1,7 @@
 # ============================================================================
 # CI Pipeline - Continuous Integration
 # ============================================================================
-# Triggers: push em qualquer branch, pull requests para main/develop
+# Triggers: push em main/develop + pull requests para main/develop
 # Executa: Build + Testes + Quality Checks
 # ============================================================================
 
@@ -9,10 +9,24 @@ name: CI - Build & Test
 
 on:
   push:
-    branches: ['**']
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   JAVA_VERSION: '21'
