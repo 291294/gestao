@@ -1,5 +1,6 @@
 package com.erp.moveis.finance.service;
 
+import com.erp.moveis.core.audit.Auditable;
 import com.erp.moveis.core.exception.BusinessException;
 import com.erp.moveis.core.exception.ResourceNotFoundException;
 import com.erp.moveis.finance.dto.PaymentRequest;
@@ -26,6 +27,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final InvoiceService invoiceService;
 
+    @Auditable(action = "CREATE", entity = "Payment")
     @Override
     @Transactional
     public PaymentResponse createPayment(PaymentRequest request) {
@@ -58,6 +60,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .collect(Collectors.toList());
     }
 
+    @Auditable(action = "CONFIRM", entity = "Payment")
     @Override
     @Transactional
     public PaymentResponse confirm(Long id) {
@@ -76,6 +79,7 @@ public class PaymentServiceImpl implements PaymentService {
         return PaymentMapper.toResponse(saved);
     }
 
+    @Auditable(action = "CANCEL", entity = "Payment")
     @Override
     @Transactional
     public PaymentResponse cancel(Long id) {
@@ -87,6 +91,7 @@ public class PaymentServiceImpl implements PaymentService {
         return PaymentMapper.toResponse(paymentRepository.save(payment));
     }
 
+    @Auditable(action = "REFUND", entity = "Payment")
     @Override
     @Transactional
     public PaymentResponse refund(Long id) {

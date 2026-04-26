@@ -4,6 +4,7 @@ import com.erp.moveis.core.auth.dto.LoginRequest;
 import com.erp.moveis.core.auth.dto.RegisterCompanyRequest;
 import com.erp.moveis.core.auth.dto.RegisterRequest;
 import com.erp.moveis.core.auth.dto.TokenResponse;
+import com.erp.moveis.core.auth.entity.RefreshToken;
 import com.erp.moveis.core.company.entity.Company;
 import com.erp.moveis.core.company.repository.CompanyRepository;
 import com.erp.moveis.core.role.entity.Role;
@@ -11,6 +12,7 @@ import com.erp.moveis.core.role.repository.RoleRepository;
 import com.erp.moveis.core.security.jwt.JwtService;
 import com.erp.moveis.core.user.entity.User;
 import com.erp.moveis.core.user.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +31,10 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
+
+    @Value("${jwt.expiration}")
+    private long jwtExpiration;
 
     public AuthService(
             UserRepository userRepository,
@@ -36,7 +42,8 @@ public class AuthService {
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager,
+            RefreshTokenService refreshTokenService
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
@@ -44,6 +51,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Transactional
@@ -59,9 +67,9 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         String accessToken = jwtService.generateToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
+        RefreshToken refreshToken = refreshTokenService.create(user);
 
-        return buildResponse(user, accessToken, refreshToken);
+        return buildResponse(user, accessToken, refreshToken.getToken());
     }
 
     @Transactional
@@ -69,7 +77,6 @@ public class AuthService {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new IllegalArgumentException("Username already exists");
         }
-
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
@@ -88,28 +95,48 @@ public class AuthService {
         user.setCompany(company);
         user.setActive(true);
         user.addRole(defaultRole);
-
         user = userRepository.save(user);
 
         String accessToken = jwtService.generateToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
+        RefreshToken refreshToken = refreshTokenService.create(user);
 
-        return buildResponse(user, accessToken, refreshToken);
+        return buildResponse(user, accessToken, refreshToken.getToken());
     }
 
-    @Transactional(readOnly = true)
-    public TokenResponse refreshToken(String refreshToken) {
-        String username = jwtService.extractUsername(refreshToken);
+    /**
+     * Rotaciona o refresh token:
+     * - Valida no banco
+     * - Revoga o antigo
+     * - Gera novo refresh + novo access
+     * - Detecta replay attack automaticamente
+     */
+    @Transactional
+    public TokenResponse refreshToken(String tokenValue) {
+        RefreshToken newRefreshToken = refreshTokenService.rotate(tokenValue);
+        User user = newRefreshToken.getUser();
+        String newAccessToken = jwtService.generateToken(user);
+        return buildResponse(user, newAccessToken, newRefreshToken.getToken());
+    }
+
+    /**
+     * Logout: revoga todos os refresh tokens ativos do usuário.
+     */
+    @Transactional
+    public void logout(String username) {
+        userRepository.findByUsername(username)
+                .ifPresent(user -> refreshTokenService.revokeAllByUser(user.getId()));
+    }
+
+    /**
+     * Troca de senha: atualiza o hash e invalida todos os refresh tokens.
+     */
+    @Transactional
+    public void changePassword(String username, String newPassword) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        if (!jwtService.isTokenValid(refreshToken, user)) {
-            throw new IllegalArgumentException("Invalid refresh token");
-        }
-
-        String newAccessToken = jwtService.generateToken(user);
-
-        return buildResponse(user, newAccessToken, refreshToken);
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        refreshTokenService.revokeAllByUser(user.getId());
     }
 
     @Transactional
@@ -117,16 +144,13 @@ public class AuthService {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new IllegalArgumentException("Username already exists");
         }
-
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
 
-        // Create the company
         Company company = new Company(request.getCompanyName(), request.getCnpj());
         company = companyRepository.save(company);
 
-        // Create admin user for the company
         Role adminRole = roleRepository.findByName("ADMIN")
                 .orElseThrow(() -> new IllegalStateException("ADMIN role not found"));
 
@@ -138,13 +162,12 @@ public class AuthService {
         user.setCompany(company);
         user.setActive(true);
         user.addRole(adminRole);
-
         user = userRepository.save(user);
 
         String accessToken = jwtService.generateToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
+        RefreshToken refreshToken = refreshTokenService.create(user);
 
-        return buildResponse(user, accessToken, refreshToken);
+        return buildResponse(user, accessToken, refreshToken.getToken());
     }
 
     private TokenResponse buildResponse(User user, String accessToken, String refreshToken) {
@@ -164,7 +187,7 @@ public class AuthService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
-                .expiresIn(86400000L)
+                .expiresIn(jwtExpiration)
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .fullName(user.getFullName())

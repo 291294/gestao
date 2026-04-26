@@ -5,6 +5,7 @@ import com.erp.moveis.sales.dto.CommissionResponse;
 import com.erp.moveis.sales.entity.Commission.CommissionStatus;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 public interface CommissionService {
@@ -12,6 +13,8 @@ public interface CommissionService {
     CommissionResponse createCommission(CommissionRequest request);
 
     CommissionResponse getCommission(Long id);
+
+    List<CommissionResponse> getByCompanyId(Long companyId);
 
     List<CommissionResponse> getCommissionsBySeller(Long sellerId);
 
@@ -30,4 +33,6 @@ public interface CommissionService {
     BigDecimal getTotalPendingBySeller(Long sellerId);
 
     List<CommissionResponse> getDueForPayment();
+
+    List<CommissionResponse> getBySellerAndPeriod(Long sellerId, LocalDate startDate, LocalDate endDate);
 }

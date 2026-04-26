@@ -53,9 +53,14 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        // Endpoints públicos de autenticação (sem access token)
+                        .requestMatchers("/auth/login", "/auth/register", "/auth/register-company", "/auth/refresh").permitAll()
+                        // /auth/logout exige access token válido
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/actuator/**").permitAll()
+                        // Somente /actuator/health é público (sem detalhes internos)
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // Métricas e prometheus exigem usuário autenticado com role ADMIN
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/h2-console/**").permitAll()
                         .anyRequest().authenticated()
                 )

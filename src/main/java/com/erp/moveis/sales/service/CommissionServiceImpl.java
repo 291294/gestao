@@ -2,6 +2,7 @@ package com.erp.moveis.sales.service;
 
 import com.erp.moveis.core.exception.BusinessException;
 import com.erp.moveis.core.exception.ResourceNotFoundException;
+import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.sales.dto.CommissionRequest;
 import com.erp.moveis.sales.dto.CommissionResponse;
 import com.erp.moveis.sales.entity.Commission;
@@ -29,6 +30,7 @@ public class CommissionServiceImpl implements CommissionService {
     @Transactional
     public CommissionResponse createCommission(CommissionRequest request) {
         Commission commission = CommissionMapper.toEntity(request);
+        commission.setCompanyId(TenantContext.requireTenantId());
         commission.calculateCommission();
         Commission saved = commissionRepository.save(commission);
         return CommissionMapper.toResponse(saved);
@@ -39,6 +41,14 @@ public class CommissionServiceImpl implements CommissionService {
     public CommissionResponse getCommission(Long id) {
         Commission commission = findEntityById(id);
         return CommissionMapper.toResponse(commission);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CommissionResponse> getByCompanyId(Long companyId) {
+        return commissionRepository.findByCompanyId(companyId).stream()
+                .map(CommissionMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -106,19 +116,28 @@ public class CommissionServiceImpl implements CommissionService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getTotalPaidBySeller(Long sellerId) {
-        return commissionRepository.calculateTotalPaidBySeller(sellerId);
+        return commissionRepository.calculateTotalPaidBySeller(TenantContext.requireTenantId(), sellerId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getTotalPendingBySeller(Long sellerId) {
-        return commissionRepository.calculateTotalPendingBySeller(sellerId);
+        return commissionRepository.calculateTotalPendingBySeller(TenantContext.requireTenantId(), sellerId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CommissionResponse> getDueForPayment() {
-        return commissionRepository.findDueForPayment(LocalDate.now()).stream()
+        return commissionRepository.findDueForPayment(TenantContext.requireTenantId(), LocalDate.now()).stream()
+                .map(CommissionMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CommissionResponse> getBySellerAndPeriod(Long sellerId, LocalDate startDate, LocalDate endDate) {
+        return commissionRepository.findBySellerAndPaymentPeriod(
+                TenantContext.requireTenantId(), sellerId, startDate, endDate).stream()
                 .map(CommissionMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -126,7 +145,7 @@ public class CommissionServiceImpl implements CommissionService {
     // ── Helpers ────────────────────────────────────────────────
 
     private Commission findEntityById(Long id) {
-        return commissionRepository.findById(id)
+        return commissionRepository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Commission", id));
     }
 }

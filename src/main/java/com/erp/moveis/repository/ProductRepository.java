@@ -1,9 +1,15 @@
 package com.erp.moveis.repository;
 
 import com.erp.moveis.model.Product;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,4 +20,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByCompanyId(Long companyId);
     Page<Product> findByCompanyId(Long companyId, Pageable pageable);
     Optional<Product> findByIdAndCompanyId(Long id, Long companyId);
+
+    /**
+     * Busca o produto com lock pessimista de escrita.
+     * Usar em operações que alteram estoque para evitar race conditions.
+     * Timeout de 3 segundos para evitar deadlocks longos.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000"))
+    @Query("SELECT p FROM Product p WHERE p.id = :id AND p.companyId = :companyId")
+    Optional<Product> findByIdAndCompanyIdForUpdate(@Param("id") Long id, @Param("companyId") Long companyId);
 }

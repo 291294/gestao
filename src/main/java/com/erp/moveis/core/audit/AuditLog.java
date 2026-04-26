@@ -43,6 +43,12 @@ public class AuditLog implements TenantAware {
     @Column(columnDefinition = "TEXT")
     private String details;
 
+    @Column(name = "request_data", columnDefinition = "TEXT")
+    private String requestData;
+
+    @Column(name = "response_data", columnDefinition = "TEXT")
+    private String responseData;
+
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 

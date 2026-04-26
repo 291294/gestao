@@ -1,5 +1,6 @@
 package com.erp.moveis.service;
 
+import com.erp.moveis.core.audit.Auditable;
 import com.erp.moveis.core.exception.ResourceNotFoundException;
 import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.inventory.service.InventoryService;
@@ -42,6 +43,7 @@ public class OrderService {
         return repository.findByCompanyIdAndClientId(TenantContext.requireTenantId(), clientId);
     }
 
+    @Auditable(action = "CREATE", entity = "Order")
     @Transactional
     public Order save(Order order) {
         order.setCompanyId(TenantContext.requireTenantId());
@@ -74,11 +76,13 @@ public class OrderService {
         return saved;
     }
 
+    @Auditable(action = "DELETE", entity = "Order")
     public void delete(Long id) {
         repository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
                 .ifPresent(o -> repository.deleteById(o.getId()));
     }
 
+    @Auditable(action = "UPDATE", entity = "Order")
     @Transactional
     public Order update(Long id, Order orderDetails) {
         Order existingOrder = repository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
@@ -93,6 +97,7 @@ public class OrderService {
         return repository.save(existingOrder);
     }
 
+    @Auditable(action = "CANCEL", entity = "Order")
     @Transactional
     public Order cancel(Long id) {
         Order order = repository.findByIdAndCompanyId(id, TenantContext.requireTenantId())

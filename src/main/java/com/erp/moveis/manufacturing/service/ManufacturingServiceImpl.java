@@ -52,9 +52,11 @@ public class ManufacturingServiceImpl implements ManufacturingService {
             throw new BusinessException("Production order must be in CREATED status to start");
         }
 
-        BillOfMaterial bom = bomRepository.findByProductId(order.getProductId());
-        if (bom == null || bom.getItems() == null || bom.getItems().isEmpty()) {
-            throw new BusinessException("No Bill of Materials found for product: " + order.getProductId());
+        BillOfMaterial bom = bomRepository.findByProductIdAndCompanyId(order.getProductId(), order.getCompanyId())
+                .orElseThrow(() -> new BusinessException("No Bill of Materials found for product: " + order.getProductId()));
+
+        if (bom.getItems() == null || bom.getItems().isEmpty()) {
+            throw new BusinessException("Bill of Materials has no items for product: " + order.getProductId());
         }
 
         for (BillOfMaterialItem item : bom.getItems()) {

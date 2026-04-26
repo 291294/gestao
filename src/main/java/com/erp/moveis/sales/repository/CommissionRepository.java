@@ -14,6 +14,10 @@ import java.util.Optional;
 @Repository
 public interface CommissionRepository extends JpaRepository<Commission, Long> {
 
+    Optional<Commission> findByIdAndCompanyId(Long id, Long companyId);
+
+    List<Commission> findByCompanyId(Long companyId);
+
     List<Commission> findBySellerId(Long sellerId);
 
     List<Commission> findBySellerIdAndStatus(Long sellerId, CommissionStatus status);
@@ -22,19 +26,20 @@ public interface CommissionRepository extends JpaRepository<Commission, Long> {
 
     List<Commission> findByStatus(CommissionStatus status);
 
-    @Query("SELECT c FROM Commission c WHERE c.sellerId = :sellerId AND c.paymentDate BETWEEN :startDate AND :endDate")
+    @Query("SELECT c FROM Commission c WHERE c.companyId = :companyId AND c.sellerId = :sellerId AND c.paymentDate BETWEEN :startDate AND :endDate")
     List<Commission> findBySellerAndPaymentPeriod(
+            @Param("companyId") Long companyId,
             @Param("sellerId") Long sellerId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
 
-    @Query("SELECT COALESCE(SUM(c.commissionAmount), 0) FROM Commission c WHERE c.sellerId = :sellerId AND c.status = 'PAID'")
-    java.math.BigDecimal calculateTotalPaidBySeller(@Param("sellerId") Long sellerId);
+    @Query("SELECT COALESCE(SUM(c.commissionAmount), 0) FROM Commission c WHERE c.companyId = :companyId AND c.sellerId = :sellerId AND c.status = 'PAID'")
+    java.math.BigDecimal calculateTotalPaidBySeller(@Param("companyId") Long companyId, @Param("sellerId") Long sellerId);
 
-    @Query("SELECT COALESCE(SUM(c.commissionAmount), 0) FROM Commission c WHERE c.sellerId = :sellerId AND c.status = 'PENDING'")
-    java.math.BigDecimal calculateTotalPendingBySeller(@Param("sellerId") Long sellerId);
+    @Query("SELECT COALESCE(SUM(c.commissionAmount), 0) FROM Commission c WHERE c.companyId = :companyId AND c.sellerId = :sellerId AND c.status = 'PENDING'")
+    java.math.BigDecimal calculateTotalPendingBySeller(@Param("companyId") Long companyId, @Param("sellerId") Long sellerId);
 
-    @Query("SELECT c FROM Commission c WHERE c.status = 'APPROVED' AND c.paymentDate <= :date")
-    List<Commission> findDueForPayment(@Param("date") LocalDate date);
+    @Query("SELECT c FROM Commission c WHERE c.companyId = :companyId AND c.status = 'APPROVED' AND c.paymentDate <= :date")
+    List<Commission> findDueForPayment(@Param("companyId") Long companyId, @Param("date") LocalDate date);
 }

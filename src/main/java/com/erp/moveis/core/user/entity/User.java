@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
@@ -83,11 +82,21 @@ public class User implements UserDetails {
     // UserDetails implementation
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles.stream()
+        Set<SimpleGrantedAuthority> authorities = new HashSet<>();
+
+        // Adiciona roles com prefixo ROLE_ (necessário para hasRole() no Spring Security)
+        roles.forEach(role ->
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()))
+        );
+
+        // Adiciona permissões granulares (usado com hasAuthority() nos @PreAuthorize)
+        roles.stream()
                 .flatMap(role -> role.getPermissions().stream())
                 .map(permission -> new SimpleGrantedAuthority(
                         permission.getResource() + "." + permission.getAction()))
-                .collect(Collectors.toSet());
+                .forEach(authorities::add);
+
+        return authorities;
     }
 
     @Override
