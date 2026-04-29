@@ -63,7 +63,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/prometheus").permitAll()
                         // Demais endpoints do actuator exigem role ADMIN
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
-                        .requestMatchers("/h2-console/**").permitAll()
+                        // H2 console APENAS em desenvolvimento (sem perfil prod)
+                        .requestMatchers("/h2-console/**").denyAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
