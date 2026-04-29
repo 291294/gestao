@@ -18,13 +18,13 @@ public interface CommissionRepository extends JpaRepository<Commission, Long> {
 
     List<Commission> findByCompanyId(Long companyId);
 
-    List<Commission> findBySellerId(Long sellerId);
+    List<Commission> findByCompanyIdAndSellerId(Long companyId, Long sellerId);
 
-    List<Commission> findBySellerIdAndStatus(Long sellerId, CommissionStatus status);
+    List<Commission> findByCompanyIdAndSellerIdAndStatus(Long companyId, Long sellerId, CommissionStatus status);
+
+    List<Commission> findByCompanyIdAndStatus(Long companyId, CommissionStatus status);
 
     Optional<Commission> findByOrderId(Long orderId);
-
-    List<Commission> findByStatus(CommissionStatus status);
 
     @Query("SELECT c FROM Commission c WHERE c.companyId = :companyId AND c.sellerId = :sellerId AND c.paymentDate BETWEEN :startDate AND :endDate")
     List<Commission> findBySellerAndPaymentPeriod(

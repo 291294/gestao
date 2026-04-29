@@ -54,7 +54,7 @@ public class CommissionServiceImpl implements CommissionService {
     @Override
     @Transactional(readOnly = true)
     public List<CommissionResponse> getCommissionsBySeller(Long sellerId) {
-        return commissionRepository.findBySellerId(sellerId).stream()
+        return commissionRepository.findByCompanyIdAndSellerId(TenantContext.requireTenantId(), sellerId).stream()
                 .map(CommissionMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -62,7 +62,7 @@ public class CommissionServiceImpl implements CommissionService {
     @Override
     @Transactional(readOnly = true)
     public List<CommissionResponse> getCommissionsByStatus(CommissionStatus status) {
-        return commissionRepository.findByStatus(status).stream()
+        return commissionRepository.findByCompanyIdAndStatus(TenantContext.requireTenantId(), status).stream()
                 .map(CommissionMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -70,7 +70,8 @@ public class CommissionServiceImpl implements CommissionService {
     @Override
     @Transactional(readOnly = true)
     public List<CommissionResponse> getPendingBySeller(Long sellerId) {
-        return commissionRepository.findBySellerIdAndStatus(sellerId, CommissionStatus.PENDING).stream()
+        return commissionRepository.findByCompanyIdAndSellerIdAndStatus(
+                TenantContext.requireTenantId(), sellerId, CommissionStatus.PENDING).stream()
                 .map(CommissionMapper::toResponse)
                 .collect(Collectors.toList());
     }
