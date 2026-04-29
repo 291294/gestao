@@ -24,13 +24,9 @@ public interface QuoteRepository extends JpaRepository<Quote, Long> {
 
     List<Quote> findByCompanyId(Long companyId);
 
-    List<Quote> findByClientId(Long clientId);
-
-    List<Quote> findByStatus(QuoteStatus status);
-
     List<Quote> findByCompanyIdAndStatus(Long companyId, QuoteStatus status);
 
-    List<Quote> findBySellerIdAndStatus(Long sellerId, QuoteStatus status);
+    Optional<Quote> findByIdAndCompanyId(Long id, Long companyId);
 
     // ── Paginação ──────────────────────────────────────────────
 

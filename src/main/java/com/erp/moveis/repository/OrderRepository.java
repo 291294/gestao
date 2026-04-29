@@ -13,8 +13,6 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
-    @Query("SELECT o FROM Order o WHERE o.client.id = :clientId")
-    List<Order> findByClientId(@Param("clientId") Long clientId);
 
     List<Order> findByCompanyId(Long companyId);
     Page<Order> findByCompanyId(Long companyId, Pageable pageable);

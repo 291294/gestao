@@ -23,11 +23,11 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     Page<Invoice> findByCompanyId(Long companyId, Pageable pageable);
 
-    List<Invoice> findByClientId(Long clientId);
-
-    List<Invoice> findByStatus(InvoiceStatus status);
+    List<Invoice> findByCompanyIdAndClientId(Long companyId, Long clientId);
 
     List<Invoice> findByCompanyIdAndStatus(Long companyId, InvoiceStatus status);
+
+    Optional<Invoice> findByIdAndCompanyId(Long id, Long companyId);
 
     Optional<Invoice> findByOrderId(Long orderId);
 

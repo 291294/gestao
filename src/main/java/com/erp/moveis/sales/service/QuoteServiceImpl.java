@@ -2,6 +2,7 @@ package com.erp.moveis.sales.service;
 
 import com.erp.moveis.core.exception.BusinessException;
 import com.erp.moveis.core.exception.ResourceNotFoundException;
+import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.model.Client;
 import com.erp.moveis.model.Order;
 import com.erp.moveis.repository.ClientRepository;
@@ -85,7 +86,7 @@ public class QuoteServiceImpl implements QuoteService {
     @Override
     @Transactional(readOnly = true)
     public List<QuoteResponse> getQuotesByStatus(QuoteStatus status) {
-        return quoteRepository.findByStatus(status).stream()
+        return quoteRepository.findByCompanyIdAndStatus(TenantContext.requireTenantId(), status).stream()
                 .map(QuoteMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -224,7 +225,7 @@ public class QuoteServiceImpl implements QuoteService {
     // ── Helpers (private) ──────────────────────────────────────
 
     private Quote findEntityById(Long id) {
-        return quoteRepository.findById(id)
+        return quoteRepository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Quote", id));
     }
 

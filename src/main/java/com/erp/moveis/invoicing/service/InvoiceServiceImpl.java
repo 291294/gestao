@@ -2,6 +2,7 @@ package com.erp.moveis.invoicing.service;
 
 import com.erp.moveis.core.exception.BusinessException;
 import com.erp.moveis.core.exception.ResourceNotFoundException;
+import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.invoicing.dto.InvoiceItemRequest;
 import com.erp.moveis.invoicing.dto.InvoiceRequest;
 import com.erp.moveis.invoicing.dto.InvoiceResponse;
@@ -66,7 +67,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     @Transactional(readOnly = true)
     public List<InvoiceResponse> getByClient(Long clientId) {
-        return invoiceRepository.findByClientId(clientId).stream()
+        return invoiceRepository.findByCompanyIdAndClientId(TenantContext.requireTenantId(), clientId).stream()
                 .map(InvoiceMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -202,7 +203,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     // ── Helpers ────────────────────────────────────────────────
 
     private Invoice findEntityById(Long id) {
-        return invoiceRepository.findById(id)
+        return invoiceRepository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice", id));
     }
 

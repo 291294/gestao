@@ -7,7 +7,5 @@ import java.util.Optional;
 
 public interface BillOfMaterialRepository extends JpaRepository<BillOfMaterial, Long> {
 
-    BillOfMaterial findByProductId(Long productId);
-
     Optional<BillOfMaterial> findByProductIdAndCompanyId(Long productId, Long companyId);
 }

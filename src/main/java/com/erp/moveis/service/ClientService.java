@@ -1,5 +1,6 @@
 package com.erp.moveis.service;
 
+import com.erp.moveis.core.audit.Auditable;
 import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.model.Client;
 import com.erp.moveis.repository.ClientRepository;
@@ -32,18 +33,21 @@ public class ClientService {
         return repository.findByIdAndCompanyId(id, TenantContext.requireTenantId());
     }
 
+    @Auditable(action = "CREATE", entity = "Client")
     @CacheEvict(value = "clients", allEntries = true)
     public Client save(Client client) {
         client.setCompanyId(TenantContext.requireTenantId());
         return repository.save(client);
     }
 
+    @Auditable(action = "DELETE", entity = "Client")
     @CacheEvict(value = "clients", allEntries = true)
     public void delete(Long id) {
         repository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
                 .ifPresent(c -> repository.deleteById(c.getId()));
     }
 
+    @Auditable(action = "UPDATE", entity = "Client")
     @CacheEvict(value = "clients", allEntries = true)
     public Client update(Long id, Client clientDetails) {
         Optional<Client> client = repository.findByIdAndCompanyId(id, TenantContext.requireTenantId());
