@@ -59,7 +59,9 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         // Somente /actuator/health é público (sem detalhes internos)
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                        // Métricas e prometheus exigem usuário autenticado com role ADMIN
+                        // Prometheus scraper interno (Docker network) - não exposto externamente
+                        .requestMatchers("/actuator/prometheus").permitAll()
+                        // Demais endpoints do actuator exigem role ADMIN
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/h2-console/**").permitAll()
                         .anyRequest().authenticated()
