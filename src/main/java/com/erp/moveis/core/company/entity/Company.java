@@ -17,6 +17,15 @@ public class Company {
     @Column(length = 20, unique = true)
     private String cnpj;
 
+    @Column(length = 30)
+    private String phone;
+
+    @Column(length = 255)
+    private String email;
+
+    @Column(length = 500)
+    private String address;
+
     @Column(nullable = false)
     private Boolean active = true;
 
@@ -69,6 +78,30 @@ public class Company {
 
     public void setCnpj(String cnpj) {
         this.cnpj = cnpj;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 
     public Boolean getActive() {

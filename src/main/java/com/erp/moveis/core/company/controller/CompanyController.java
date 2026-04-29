@@ -46,6 +46,9 @@ public class CompanyController {
         return companyRepository.findById(id).map(existing -> {
             existing.setName(company.getName());
             existing.setCnpj(company.getCnpj());
+            existing.setPhone(company.getPhone());
+            existing.setEmail(company.getEmail());
+            existing.setAddress(company.getAddress());
             return ResponseEntity.ok(companyRepository.save(existing));
         }).orElse(ResponseEntity.notFound().build());
     }

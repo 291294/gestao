@@ -2,6 +2,7 @@ package com.erp.moveis.sales.service;
 
 import com.erp.moveis.core.exception.BusinessException;
 import com.erp.moveis.core.exception.ResourceNotFoundException;
+import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.model.Client;
 import com.erp.moveis.model.Order;
 import com.erp.moveis.repository.ClientRepository;
@@ -14,6 +15,7 @@ import com.erp.moveis.sales.mapper.QuoteMapper;
 import com.erp.moveis.sales.repository.CommissionRepository;
 import com.erp.moveis.sales.repository.QuoteItemRepository;
 import com.erp.moveis.sales.repository.QuoteRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,9 +47,13 @@ class QuoteServiceImplTest {
 
     private Quote quote;
     private QuoteResponse response;
+    private MockedStatic<TenantContext> tenantContextMock;
+    private static final Long COMPANY_ID = 1L;
 
     @BeforeEach
     void setUp() {
+        tenantContextMock = mockStatic(TenantContext.class);
+        tenantContextMock.when(TenantContext::requireTenantId).thenReturn(COMPANY_ID);
         quote = Quote.builder()
                 .id(1L)
                 .companyId(1L)
@@ -67,7 +73,12 @@ class QuoteServiceImplTest {
         response.setStatus(QuoteStatus.DRAFT);
     }
 
-    @Test @DisplayName("getQuote — should return quote by ID")
+    @AfterEach
+    void tearDown() {
+        tenantContextMock.close();
+    }
+
+    @Test @DisplayName("getQuote – should return quote by ID")
     void shouldGetQuote() {
         when(quoteRepository.findFullQuote(1L)).thenReturn(Optional.of(quote));
         try (MockedStatic<QuoteMapper> mapper = mockStatic(QuoteMapper.class)) {
@@ -96,7 +107,7 @@ class QuoteServiceImplTest {
 
     @Test @DisplayName("getQuotesByStatus — should return filtered quotes")
     void shouldGetByStatus() {
-        when(quoteRepository.findByStatus(QuoteStatus.DRAFT)).thenReturn(List.of(quote));
+        when(quoteRepository.findByCompanyIdAndStatus(COMPANY_ID, QuoteStatus.DRAFT)).thenReturn(List.of(quote));
         try (MockedStatic<QuoteMapper> mapper = mockStatic(QuoteMapper.class)) {
             mapper.when(() -> QuoteMapper.toResponse(quote)).thenReturn(response);
             List<QuoteResponse> result = service.getQuotesByStatus(QuoteStatus.DRAFT);
@@ -106,7 +117,7 @@ class QuoteServiceImplTest {
 
     @Test @DisplayName("approve — should approve DRAFT or SENT quote")
     void shouldApprove() {
-        when(quoteRepository.findById(1L)).thenReturn(Optional.of(quote));
+        when(quoteRepository.findByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(quote));
         when(quoteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         try (MockedStatic<QuoteMapper> mapper = mockStatic(QuoteMapper.class)) {
@@ -119,7 +130,7 @@ class QuoteServiceImplTest {
     @Test @DisplayName("approve — should reject already converted quote")
     void shouldRejectApproveConverted() {
         quote.setStatus(QuoteStatus.CONVERTED);
-        when(quoteRepository.findById(1L)).thenReturn(Optional.of(quote));
+        when(quoteRepository.findByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(quote));
         assertThatThrownBy(() -> service.approve(1L))
                 .isInstanceOf(BusinessException.class);
     }
@@ -127,7 +138,7 @@ class QuoteServiceImplTest {
     @Test @DisplayName("reject — should reject non-converted quote")
     void shouldReject() {
         quote.setStatus(QuoteStatus.SENT);
-        when(quoteRepository.findById(1L)).thenReturn(Optional.of(quote));
+        when(quoteRepository.findByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(quote));
         when(quoteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         try (MockedStatic<QuoteMapper> mapper = mockStatic(QuoteMapper.class)) {
@@ -140,7 +151,7 @@ class QuoteServiceImplTest {
     @Test @DisplayName("reject — should throw for converted quote")
     void shouldThrowRejectConverted() {
         quote.setStatus(QuoteStatus.CONVERTED);
-        when(quoteRepository.findById(1L)).thenReturn(Optional.of(quote));
+        when(quoteRepository.findByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(quote));
         assertThatThrownBy(() -> service.reject(1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("converted");
@@ -149,7 +160,7 @@ class QuoteServiceImplTest {
     @Test @DisplayName("addItem — should reject non-DRAFT quote")
     void shouldRejectAddItemNonDraft() {
         quote.setStatus(QuoteStatus.SENT);
-        when(quoteRepository.findById(1L)).thenReturn(Optional.of(quote));
+        when(quoteRepository.findByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(quote));
         assertThatThrownBy(() -> service.addItem(1L, null))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("DRAFT");
@@ -157,7 +168,7 @@ class QuoteServiceImplTest {
 
     @Test @DisplayName("deleteQuote — should delete non-converted quote")
     void shouldDelete() {
-        when(quoteRepository.findById(1L)).thenReturn(Optional.of(quote));
+        when(quoteRepository.findByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(quote));
         service.deleteQuote(1L);
         verify(quoteRepository).delete(quote);
     }
@@ -165,7 +176,7 @@ class QuoteServiceImplTest {
     @Test @DisplayName("deleteQuote — should reject deleting converted quote")
     void shouldRejectDeleteConverted() {
         quote.setStatus(QuoteStatus.CONVERTED);
-        when(quoteRepository.findById(1L)).thenReturn(Optional.of(quote));
+        when(quoteRepository.findByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(quote));
         assertThatThrownBy(() -> service.deleteQuote(1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("converted");

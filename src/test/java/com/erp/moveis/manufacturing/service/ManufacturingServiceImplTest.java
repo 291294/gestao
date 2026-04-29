@@ -84,7 +84,7 @@ class ManufacturingServiceImplTest {
     @Test @DisplayName("startProduction — should consume BOM materials and set IN_PROGRESS")
     void shouldStartProduction() {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(prodOrder));
-        when(bomRepository.findByProductId(10L)).thenReturn(bom);
+        when(bomRepository.findByProductIdAndCompanyId(10L, 1L)).thenReturn(Optional.ofNullable(bom));
         when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         service.startProduction(1L);
@@ -106,7 +106,7 @@ class ManufacturingServiceImplTest {
     @Test @DisplayName("startProduction — should throw when no BOM found")
     void shouldThrowWhenNoBom() {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(prodOrder));
-        when(bomRepository.findByProductId(10L)).thenReturn(null);
+        when(bomRepository.findByProductIdAndCompanyId(10L, 1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.startProduction(1L))
                 .isInstanceOf(BusinessException.class)

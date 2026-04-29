@@ -1,13 +1,16 @@
 package com.erp.moveis.service;
 
+import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.model.Project;
 import com.erp.moveis.repository.ProjectRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -24,14 +27,24 @@ class ProjectServiceTest {
     @InjectMocks private ProjectService service;
 
     private Project project;
+    private MockedStatic<TenantContext> tenantContextMock;
+    private static final Long COMPANY_ID = 1L;
 
     @BeforeEach
     void setUp() {
+        tenantContextMock = mockStatic(TenantContext.class);
+        tenantContextMock.when(TenantContext::requireTenantId).thenReturn(COMPANY_ID);
         project = new Project();
         project.setId(1L);
+        project.setCompanyId(COMPANY_ID);
         project.setName("Kitchen Renovation");
         project.setDescription("Full kitchen design");
         project.setBudget(15000.0);
+    }
+
+    @AfterEach
+    void tearDown() {
+        tenantContextMock.close();
     }
 
     @Test @DisplayName("list — should return all projects")
@@ -58,7 +71,7 @@ class ProjectServiceTest {
 
     @Test @DisplayName("findByClientId — should return client projects")
     void shouldFindByClientId() {
-        when(repository.findByClientId(5L)).thenReturn(List.of(project));
+        when(repository.findByCompanyIdAndClientId(COMPANY_ID, 5L)).thenReturn(List.of(project));
         List<Project> result = service.findByClientId(5L);
         assertThat(result).hasSize(1);
     }
