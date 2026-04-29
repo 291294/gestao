@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, Long> {
-    List<Project> findByClientId(Long clientId);
+    List<Project> findByCompanyIdAndClientId(Long companyId, Long clientId);
     List<Project> findByCompanyId(Long companyId);
     Optional<Project> findByIdAndCompanyId(Long id, Long companyId);
 }

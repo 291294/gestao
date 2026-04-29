@@ -16,29 +16,27 @@ public class ProjectService {
     private ProjectRepository repository;
 
     public List<Project> list() {
-        return repository.findByCompanyId(TenantContext.requireTenantId());
+        return repository.findAll();
     }
 
     public Optional<Project> findById(Long id) {
-        return repository.findByIdAndCompanyId(id, TenantContext.requireTenantId());
+        return repository.findById(id);
     }
 
     public List<Project> findByClientId(Long clientId) {
-        return repository.findByClientId(clientId);
+        return repository.findByCompanyIdAndClientId(TenantContext.requireTenantId(), clientId);
     }
 
     public Project save(Project project) {
-        project.setCompanyId(TenantContext.requireTenantId());
         return repository.save(project);
     }
 
     public void delete(Long id) {
-        repository.findByIdAndCompanyId(id, TenantContext.requireTenantId())
-                .ifPresent(p -> repository.deleteById(p.getId()));
+        repository.deleteById(id);
     }
 
     public Project update(Long id, Project projectDetails) {
-        Optional<Project> project = repository.findByIdAndCompanyId(id, TenantContext.requireTenantId());
+        Optional<Project> project = repository.findById(id);
         if (project.isPresent()) {
             Project existingProject = project.get();
             if (projectDetails.getName() != null) {
