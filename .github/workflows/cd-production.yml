@@ -138,6 +138,7 @@ jobs:
         with:
           repository: 291294/erp-frontend
           path: erp-frontend
+          token: ${{ secrets.FRONTEND_REPO_TOKEN }}
 
       - name: 🏷️ Extract Frontend metadata
         id: meta-frontend
