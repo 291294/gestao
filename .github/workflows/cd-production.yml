@@ -309,7 +309,7 @@ jobs:
               image: ${IMG_FRONTEND}:${VERSION}
               container_name: erp-frontend
               ports:
-                - "3000:80"
+                - "80:80"
               networks:
                 - erp-network
               depends_on:
