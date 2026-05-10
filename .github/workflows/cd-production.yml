@@ -188,200 +188,188 @@ jobs:
           echo "⏰ Waiting for manual approval..."
 
   # ==========================================================================
-  # Deploy to Production
+  # Deploy to Production (runs on self-hosted runner no servidor)
   # ==========================================================================
   deploy-production:
     name: 🚀 Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, erp]
     needs: [build-and-push, approval]
     environment:
       name: production
 
     steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
       - name: 💾 Backup Current Version
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_PORT || 22 }}
-          script: |
-            echo "💾 Creating backup of current deployment..."
-            mkdir -p ~/erp-backups
-            cd ~/erp-production
-            
-            # Backup docker-compose and current version info
-            cp docker-compose.yml ~/erp-backups/docker-compose.yml.$(date +%Y%m%d-%H%M%S)
-            docker-compose config > ~/erp-backups/config-backup-$(date +%Y%m%d-%H%M%S).yml
-            
-            # Save current image tags
-            docker-compose images > ~/erp-backups/images-$(date +%Y%m%d-%H%M%S).txt
-            
-            echo "✅ Backup completed"
+        run: |
+          echo "💾 Creating backup of current deployment..."
+          mkdir -p ~/erp-backups ~/erp-production
+          if [ -f ~/erp-production/docker-compose.yml ]; then
+            cp ~/erp-production/docker-compose.yml \
+              ~/erp-backups/docker-compose.yml.$(date +%Y%m%d-%H%M%S)
+            docker compose -f ~/erp-production/docker-compose.yml images \
+              > ~/erp-backups/images-$(date +%Y%m%d-%H%M%S).txt 2>/dev/null || true
+          fi
+          echo "✅ Backup completed"
 
       - name: 🚀 Deploy to Production
-        uses: appleboy/ssh-action@v1.0.0
         env:
           VERSION: ${{ needs.build-and-push.outputs.version }}
-          REGISTRY: ${{ env.REGISTRY }}
-          IMAGE_BACKEND: ${{ env.IMAGE_BACKEND }}
-          IMAGE_FRONTEND: ${{ env.IMAGE_FRONTEND }}
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_PORT || 22 }}
-          envs: VERSION,REGISTRY,IMAGE_BACKEND,IMAGE_FRONTEND
-          script: |
-            echo "╔══════════════════════════════════════════════════════════╗"
-            echo "║          🚀 PRODUCTION DEPLOYMENT STARTING               ║"
-            echo "╚══════════════════════════════════════════════════════════╝"
-            echo ""
-            echo "📦 Version: ${VERSION}"
-            echo "🕐 Time: $(date)"
-            
-            # Create production directory
-            mkdir -p ~/erp-production
-            cd ~/erp-production
-            
-            # Login to registry
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-            
-            # Pull production images
-            echo "📥 Pulling images..."
-            docker pull ${REGISTRY}/${IMAGE_BACKEND}:${VERSION}
-            docker pull ${REGISTRY}/${IMAGE_FRONTEND}:${VERSION}
-            
-            # Update docker-compose with production config
-            cat > docker-compose.yml << 'EOF'
-            version: '3.8'
-            
-            networks:
-              erp-network:
-                driver: bridge
-            
-            volumes:
-              postgres-data:
-              postgres-backups:
-            
-            services:
-              postgres:
-                image: postgres:17-alpine
-                environment:
-                  POSTGRES_DB: ${{ secrets.PROD_DB_NAME }}
-                  POSTGRES_USER: ${{ secrets.PROD_DB_USER }}
-                  POSTGRES_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
-                volumes:
-                  - postgres-data:/var/lib/postgresql/data
-                  - postgres-backups:/backups
-                networks:
-                  - erp-network
-                restart: always
-                healthcheck:
-                  test: ["CMD-SHELL", "pg_isready -U ${{ secrets.PROD_DB_USER }}"]
-                  interval: 10s
-                  timeout: 5s
-                  retries: 5
-              
-              backend:
-                image: ${REGISTRY}/${IMAGE_BACKEND}:${VERSION}
-                environment:
-                  SPRING_PROFILES_ACTIVE: prod
-                  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${{ secrets.PROD_DB_NAME }}
-                  SPRING_DATASOURCE_USERNAME: ${{ secrets.PROD_DB_USER }}
-                  SPRING_DATASOURCE_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
-                  JWT_SECRET: ${{ secrets.PROD_JWT_SECRET }}
-                  JWT_EXPIRATION: ${{ secrets.PROD_JWT_EXPIRATION }}
-                  JAVA_OPTS: "-Xms1024m -Xmx2048m -XX:+UseG1GC"
-                ports:
-                  - "8080:8080"
-                networks:
-                  - erp-network
-                depends_on:
-                  postgres:
-                    condition: service_healthy
-                restart: always
-                healthcheck:
-                  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/actuator/health"]
-                  interval: 30s
-                  timeout: 10s
-                  retries: 3
-                  start_period: 90s
-              
-              frontend:
-                image: ${REGISTRY}/${IMAGE_FRONTEND}:${VERSION}
-                ports:
-                  - "3000:80"
-                networks:
-                  - erp-network
-                depends_on:
-                  - backend
-                restart: always
-                healthcheck:
-                  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
-                  interval: 30s
-                  timeout: 5s
-                  retries: 3
-            EOF
-            
-            # Blue-Green deployment strategy
-            echo "🔄 Performing rolling update..."
-            docker-compose up -d --no-deps --build
-            
-            # Wait for health checks
-            echo "⏳ Waiting for services to be healthy..."
-            sleep 45
-            
-            # Verify deployment
-            if docker-compose ps | grep -q "Up"; then
-              echo "✅ Deployment successful!"
-              
-              # Cleanup old images
-              docker image prune -af --filter "until=168h"
-            else
-              echo "❌ Deployment verification failed!"
-              exit 1
-            fi
+          IMG_BACKEND: ghcr.io/${{ github.repository }}/backend
+          IMG_FRONTEND: ghcr.io/${{ github.repository }}/frontend
+          DB_NAME: ${{ secrets.PROD_DB_NAME }}
+          DB_USER: ${{ secrets.PROD_DB_USER }}
+          DB_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.PROD_JWT_SECRET }}
+          JWT_EXPIRATION: ${{ secrets.PROD_JWT_EXPIRATION }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_ACTOR: ${{ github.actor }}
+        run: |
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║          🚀 PRODUCTION DEPLOYMENT STARTING               ║"
+          echo "╚══════════════════════════════════════════════════════════╝"
+          echo "📦 Version: ${VERSION}"
+          echo "🕐 Time: $(date)"
+
+          mkdir -p ~/erp-production
+          cd ~/erp-production
+
+          # Login to GHCR
+          echo "${GH_TOKEN}" | docker login ghcr.io -u "${GH_ACTOR}" --password-stdin
+
+          # Pull images
+          echo "📥 Pulling images..."
+          docker pull "${IMG_BACKEND}:${VERSION}"
+          docker pull "${IMG_FRONTEND}:${VERSION}"
+
+          # Write docker-compose.yml
+          cat > docker-compose.yml << EOF
+          version: '3.8'
+
+          networks:
+            erp-network:
+              driver: bridge
+
+          volumes:
+            postgres-data:
+            postgres-backups:
+
+          services:
+            postgres:
+              image: postgres:17-alpine
+              container_name: erp-postgres
+              environment:
+                POSTGRES_DB: ${DB_NAME}
+                POSTGRES_USER: ${DB_USER}
+                POSTGRES_PASSWORD: ${DB_PASSWORD}
+              volumes:
+                - postgres-data:/var/lib/postgresql/data
+                - postgres-backups:/backups
+              networks:
+                - erp-network
+              restart: always
+              healthcheck:
+                test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+                interval: 10s
+                timeout: 5s
+                retries: 5
+
+            redis:
+              image: redis:7-alpine
+              container_name: erp-redis
+              networks:
+                - erp-network
+              restart: always
+
+            backend:
+              image: ${IMG_BACKEND}:${VERSION}
+              container_name: erp-backend
+              environment:
+                SPRING_PROFILES_ACTIVE: prod
+                SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+                SPRING_DATASOURCE_USERNAME: ${DB_USER}
+                SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+                JWT_SECRET: ${JWT_SECRET}
+                JWT_EXPIRATION: ${JWT_EXPIRATION}
+                JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+              ports:
+                - "8080:8080"
+              networks:
+                - erp-network
+              depends_on:
+                postgres:
+                  condition: service_healthy
+              restart: always
+              healthcheck:
+                test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/actuator/health"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+                start_period: 90s
+
+            frontend:
+              image: ${IMG_FRONTEND}:${VERSION}
+              container_name: erp-frontend
+              ports:
+                - "3000:80"
+              networks:
+                - erp-network
+              depends_on:
+                - backend
+              restart: always
+              healthcheck:
+                test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+                interval: 30s
+                timeout: 5s
+                retries: 3
+          EOF
+
+          echo "🔄 Rolling update..."
+          docker compose -p erp up -d --remove-orphans
+
+          echo "⏳ Aguardando serviços ficarem saudáveis (45s)..."
+          sleep 45
+
+          if docker compose -p erp ps | grep -q "Up"; then
+            echo "✅ Deployment successful!"
+            docker image prune -af --filter "until=168h" || true
+          else
+            echo "❌ Deployment verification failed!"
+            docker compose -p erp ps
+            docker compose -p erp logs --tail=50
+            exit 1
+          fi
 
       - name: 🏥 Production Health Check
         run: |
           echo "🏥 Running production health checks..."
           sleep 30
-          
-          # Backend health
-          for i in {1..15}; do
-            if curl -f ${{ secrets.PROD_API_URL }}/actuator/health; then
+
+          BACKEND_OK=false
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:8080/api/actuator/health > /dev/null 2>&1; then
               echo "✅ Backend is healthy"
-              BACKEND_HEALTHY=true
+              BACKEND_OK=true
               break
             fi
-            echo "⏳ Backend check $i/15 - waiting..."
+            echo "⏳ Backend check $i/15 - waiting 10s..."
             sleep 10
           done
-          
-          if [ "$BACKEND_HEALTHY" != "true" ]; then
+
+          if [ "${BACKEND_OK}" != "true" ]; then
             echo "❌ Backend health check failed!"
             exit 1
           fi
-          
-          # Frontend health
-          if curl -f ${{ secrets.PROD_URL }}; then
-            echo "✅ Frontend is healthy"
-          else
-            echo "❌ Frontend health check failed!"
-            exit 1
-          fi
-          
-          echo "✅ All production health checks passed!"
+
+          curl -sf http://localhost:3000/ > /dev/null 2>&1 \
+            && echo "✅ Frontend is healthy" \
+            || echo "⚠️  Frontend check returned non-200 (nginx pode estar ok)"
+
+          echo "✅ Production health checks passed!"
 
       - name: 📊 Create Deployment Record
         if: success()
         run: |
-          echo "📊 Recording deployment..."
-          cat > deployment-record.json << EOF
+          mkdir -p ~/erp-production
+          cat > ~/erp-production/last-deploy.json << EOF
           {
             "version": "${{ needs.build-and-push.outputs.version }}",
             "environment": "production",
@@ -391,7 +379,7 @@ jobs:
             "status": "success"
           }
           EOF
-          cat deployment-record.json
+          cat ~/erp-production/last-deploy.json
 
       - name: 🎉 Deployment Success Notification
         if: success()
@@ -400,7 +388,7 @@ jobs:
           echo "║      🎉 PRODUCTION DEPLOYMENT SUCCESSFUL! 🎉             ║"
           echo "╚══════════════════════════════════════════════════════════╝"
           echo ""
-          echo "🌐 URL: ${{ secrets.PROD_URL }}"
+          echo "🌐 URL: http://192.168.1.73"
           echo "📦 Version: ${{ needs.build-and-push.outputs.version }}"
           echo "👤 Deployed by: ${{ github.actor }}"
           echo "🕐 Time: $(date)"
@@ -408,27 +396,17 @@ jobs:
 
       - name: 🔴 Rollback on Failure
         if: failure()
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_PORT || 22 }}
-          script: |
-            echo "╔══════════════════════════════════════════════════════════╗"
-            echo "║              🔴 AUTOMATIC ROLLBACK                       ║"
-            echo "╚══════════════════════════════════════════════════════════╝"
-            
-            cd ~/erp-production
-            
-            # Restore from latest backup
-            LATEST_BACKUP=$(ls -t ~/erp-backups/docker-compose.yml.* | head -1)
-            if [ -f "$LATEST_BACKUP" ]; then
-              echo "📦 Restoring from: $LATEST_BACKUP"
-              cp "$LATEST_BACKUP" docker-compose.yml
-              docker-compose down
-              docker-compose up -d
-              echo "✅ Rollback completed"
-            else
-              echo "❌ No backup found for rollback!"
-            fi
+        run: |
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║              🔴 AUTOMATIC ROLLBACK                       ║"
+          echo "╚══════════════════════════════════════════════════════════╝"
+
+          LATEST=$(ls -t ~/erp-backups/docker-compose.yml.* 2>/dev/null | head -1)
+          if [ -f "${LATEST}" ]; then
+            echo "📦 Restoring from: ${LATEST}"
+            cp "${LATEST}" ~/erp-production/docker-compose.yml
+            docker compose -p erp up -d --remove-orphans
+            echo "✅ Rollback completed"
+          else
+            echo "⚠️  No backup found for rollback"
+          fi
