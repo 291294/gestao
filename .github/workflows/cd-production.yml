@@ -133,6 +133,12 @@ jobs:
             ENVIRONMENT=production
 
       # Frontend
+      - name: 📥 Checkout frontend repo
+        uses: actions/checkout@v4
+        with:
+          repository: 291294/erp-frontend
+          path: erp-frontend
+
       - name: 🏷️ Extract Frontend metadata
         id: meta-frontend
         uses: docker/metadata-action@v5
