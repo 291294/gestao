@@ -74,6 +74,14 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<DeliveryResponse> getByCompany(Long companyId) {
+        return deliveryRepository.findByCompanyId(companyId).stream()
+                .map(DeliveryMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<DeliveryResponse> getScheduledForDate(LocalDate date) {
         return deliveryRepository.findScheduledForDate(date).stream()
                 .map(DeliveryMapper::toResponse)

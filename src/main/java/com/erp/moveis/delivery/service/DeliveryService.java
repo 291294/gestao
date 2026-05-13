@@ -20,6 +20,8 @@ public interface DeliveryService {
 
     List<DeliveryResponse> getInTransit(Long companyId);
 
+    List<DeliveryResponse> getByCompany(Long companyId);
+
     List<DeliveryResponse> getScheduledForDate(LocalDate date);
 
     DeliveryResponse ship(Long id);

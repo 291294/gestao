@@ -4,9 +4,11 @@ import com.erp.moveis.core.auth.dto.LoginRequest;
 import com.erp.moveis.core.auth.dto.RegisterCompanyRequest;
 import com.erp.moveis.core.auth.dto.RegisterRequest;
 import com.erp.moveis.core.auth.dto.TokenResponse;
+import com.erp.moveis.core.auth.dto.UserInfoResponse;
 import com.erp.moveis.core.auth.entity.RefreshToken;
 import com.erp.moveis.core.company.entity.Company;
 import com.erp.moveis.core.company.repository.CompanyRepository;
+import com.erp.moveis.core.config.MetricsConfig;
 import com.erp.moveis.core.role.entity.Role;
 import com.erp.moveis.core.role.repository.RoleRepository;
 import com.erp.moveis.core.security.jwt.JwtService;
@@ -15,6 +17,7 @@ import com.erp.moveis.core.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +35,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
+    private final MetricsConfig.ErpMetrics metrics;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
@@ -43,7 +47,8 @@ public class AuthService {
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             AuthenticationManager authenticationManager,
-            RefreshTokenService refreshTokenService
+            RefreshTokenService refreshTokenService,
+            MetricsConfig.ErpMetrics metrics
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
@@ -52,16 +57,22 @@ public class AuthService {
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.refreshTokenService = refreshTokenService;
+        this.metrics = metrics;
     }
 
     @Transactional
     public TokenResponse authenticate(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
-                )
-        );
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getUsername(),
+                            request.getPassword()
+                    )
+            );
+        } catch (AuthenticationException ex) {
+            metrics.loginsFailure.increment();
+            throw ex;
+        }
 
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -69,6 +80,7 @@ public class AuthService {
         String accessToken = jwtService.generateToken(user);
         RefreshToken refreshToken = refreshTokenService.create(user);
 
+        metrics.loginsSuccess.increment();
         return buildResponse(user, accessToken, refreshToken.getToken());
     }
 
@@ -125,6 +137,17 @@ public class AuthService {
     public void logout(String username) {
         userRepository.findByUsername(username)
                 .ifPresent(user -> refreshTokenService.revokeAllByUser(user.getId()));
+    }
+
+    /**
+     * Retorna os dados do usuário autenticado para o endpoint GET /auth/me.
+     * Usado pelo frontend para validar a sessão via cookie HttpOnly.
+     */
+    @Transactional(readOnly = true)
+    public UserInfoResponse getCurrentUser(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return buildUserInfo(user);
     }
 
     /**
@@ -195,5 +218,28 @@ public class AuthService {
                 .roles(roleNames)
                 .permissions(permissionList)
                 .build();
+    }
+
+    private UserInfoResponse buildUserInfo(User user) {
+        List<String> roleNames = user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toList());
+
+        List<String> permissionList = user.getRoles().stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .map(p -> p.getResource() + "." + p.getAction())
+                .distinct()
+                .collect(Collectors.toList());
+
+        Long companyId = user.getCompany() != null ? user.getCompany().getId() : null;
+
+        return new UserInfoResponse(
+                user.getUsername(),
+                user.getEmail(),
+                user.getFullName(),
+                companyId,
+                roleNames,
+                permissionList
+        );
     }
 }

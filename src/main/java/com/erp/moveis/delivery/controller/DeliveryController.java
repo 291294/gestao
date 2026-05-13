@@ -54,6 +54,12 @@ public class DeliveryController {
         return ResponseEntity.ok(deliveryService.getByCompanyAndStatus(companyId, status));
     }
 
+    @GetMapping("/company/{companyId}")
+    @Operation(summary = "Listar todas as entregas da empresa")
+    public ResponseEntity<List<DeliveryResponse>> findByCompany(@PathVariable Long companyId) {
+        return ResponseEntity.ok(deliveryService.getByCompany(companyId));
+    }
+
     @GetMapping("/company/{companyId}/in-transit")
     @Operation(summary = "Listar entregas em trânsito")
     public ResponseEntity<List<DeliveryResponse>> findInTransit(@PathVariable Long companyId) {

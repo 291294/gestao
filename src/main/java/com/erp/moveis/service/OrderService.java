@@ -1,6 +1,7 @@
 package com.erp.moveis.service;
 
 import com.erp.moveis.core.audit.Auditable;
+import com.erp.moveis.core.config.MetricsConfig;
 import com.erp.moveis.core.exception.ResourceNotFoundException;
 import com.erp.moveis.core.tenant.TenantContext;
 import com.erp.moveis.inventory.service.InventoryService;
@@ -24,6 +25,7 @@ public class OrderService {
 
     private final OrderRepository repository;
     private final InventoryService inventoryService;
+    private final MetricsConfig.ErpMetrics metrics;
 
     private static final Long DEFAULT_WAREHOUSE_ID = 1L;
 
@@ -57,6 +59,7 @@ public class OrderService {
         }
 
         Order saved = repository.save(order);
+        metrics.ordersCreated.increment();
 
         // Reservar estoque para cada item do pedido
         if (saved.getItems() != null && !saved.getItems().isEmpty()) {

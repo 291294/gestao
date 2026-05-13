@@ -30,4 +30,6 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
 
     @Query("SELECT d FROM Delivery d WHERE d.status = 'IN_TRANSIT' AND d.companyId = :companyId")
     List<Delivery> findInTransit(@Param("companyId") Long companyId);
+
+    List<Delivery> findByCompanyId(Long companyId);
 }
