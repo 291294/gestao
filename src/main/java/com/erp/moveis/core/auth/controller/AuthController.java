@@ -85,9 +85,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(
             @Valid @RequestBody LoginRequest request,
+            HttpServletRequest servletRequest,
             HttpServletResponse response) {
 
-        TokenResponse tokenResponse = authService.authenticate(request);
+        TokenResponse tokenResponse = authService.authenticate(request, extractClientIp(servletRequest));
         setAuthCookies(response, tokenResponse);
         return ResponseEntity.ok(tokenResponse);
     }
@@ -262,6 +263,22 @@ public class AuthController {
             }
         }
         return null;
+    }
+
+    /**
+     * Extrai o IP real do cliente, respeitando proxies reversos via X-Forwarded-For.
+     * Retorna apenas o primeiro IP da cadeia (IP original do cliente).
+     */
+    private String extractClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
+        }
+        return request.getRemoteAddr();
     }
 }
 

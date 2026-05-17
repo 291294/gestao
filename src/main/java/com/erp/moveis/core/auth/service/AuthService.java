@@ -36,6 +36,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
     private final MetricsConfig.ErpMetrics metrics;
+    private final LoginAuditService loginAuditService;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
@@ -48,7 +49,8 @@ public class AuthService {
             JwtService jwtService,
             AuthenticationManager authenticationManager,
             RefreshTokenService refreshTokenService,
-            MetricsConfig.ErpMetrics metrics
+            MetricsConfig.ErpMetrics metrics,
+            LoginAuditService loginAuditService
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
@@ -58,10 +60,14 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
         this.refreshTokenService = refreshTokenService;
         this.metrics = metrics;
+        this.loginAuditService = loginAuditService;
     }
 
     @Transactional
-    public TokenResponse authenticate(LoginRequest request) {
+    public TokenResponse authenticate(LoginRequest request, String ip) {
+        // Verifica bloqueio ANTES de chamar o AuthenticationManager
+        loginAuditService.checkNotLocked(request.getUsername());
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -71,6 +77,7 @@ public class AuthService {
             );
         } catch (AuthenticationException ex) {
             metrics.loginsFailure.increment();
+            loginAuditService.recordFailure(request.getUsername(), ip);
             throw ex;
         }
 
@@ -81,6 +88,7 @@ public class AuthService {
         RefreshToken refreshToken = refreshTokenService.create(user);
 
         metrics.loginsSuccess.increment();
+        loginAuditService.recordSuccess(user, ip);
         return buildResponse(user, accessToken, refreshToken.getToken());
     }
 
